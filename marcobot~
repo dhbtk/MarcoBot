@@ -212,7 +212,7 @@ class IRCBot
 		else
 			@logarray[filepath] = File.new(filepath,"a")
 		end
-		
+		begin
 		case command
 			when "privmsg"
 				time = Time.new
@@ -252,6 +252,8 @@ class IRCBot
 			when "nick"
 				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user} is now known as #{message}."
 				
+		end
+		rescue Exception
 		end
 		@logarray[filepath].close()
 	end
