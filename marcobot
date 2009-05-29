@@ -152,6 +152,8 @@ class IRCBot
 				log(target,user,message,"emote")
 				if message.start_with?("ACTION rolls ") then
 					dieroll(target,message.sub("ACTION rolls ","").sub("",""))
+				elsif message.start_with?("ACTION flips a coin") then
+					coinflip(target)
 				end
 			end
 		else
@@ -328,13 +330,7 @@ class IRCBot
 					privmsg(user,"~linecount: Number of lines in the source code.")
 					privmsg(user,"~faidio   : Shows FaiDio streams.")
 				when "coinflip"
-					i = rand(2)
-					case i
-						when 0
-							privmsg(target,"Heads.")
-						when 1
-							privmsg(target,"Tails.")
-					end
+					coinflip(target)
 				when "8ball"
 					i = rand(6)
 					case i 
@@ -486,6 +482,15 @@ class IRCBot
 				end
 			else
 				privmsg(target,"Usage: (one)d(two), one is the number of dice, and two is the number of sides.")	end
+		end
+	end
+	def coinflip(target)
+		i = rand(2)
+		case i
+			when 0
+				privmsg(target,"Heads.")
+			when 1
+				privmsg(target,"Tails.")
 		end
 	end
 end
