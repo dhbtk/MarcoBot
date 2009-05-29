@@ -212,7 +212,7 @@ class IRCBot
 		else
 			@logarray[filepath] = File.new(filepath,"a")
 		end
-		
+		begin
 		case command
 			when "privmsg"
 				time = Time.new
@@ -252,6 +252,9 @@ class IRCBot
 			when "nick"
 				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user} is now known as #{message}."
 				
+		end
+		rescue Exception => detail
+			privmsg(target,"Oh dear, an exception: #{detail.message()}")
 		end
 		@logarray[filepath].close()
 	end
@@ -518,7 +521,7 @@ rescue Exception => detail
 	for i in detail.backtrace()
 		puts i 
 	end
-	irc.privmsg("#faid3.0","OH SHIT EXCEPTION")
+	irc.privmsg("#faid3.0","Oh dear, an exception: #{detail.message()}")
 	sleep 1
 	retry
 rescue exit
