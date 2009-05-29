@@ -1,3 +1,4 @@
+module Wiki
 	def find_wiki(target,article,user)
 		# Threading
 		Thread.new do
@@ -78,3 +79,4 @@
 		end
 	end
 	end
+end
