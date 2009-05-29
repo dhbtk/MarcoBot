@@ -8,8 +8,14 @@ require "socket"
 require "yaml"
 require "net/http"
 require "rexml/document"
+require "./faidio.rb"
+require "./wiki.rb"
+require "./macros.rb"
 #require "hpricot"
 class IRCBot
+	include Faidio
+	include Wiki
+	include Macros
 	# initialize: get these nasty vars and make them globals.
 	def initialize(server,port,nick,autojoin_channels,ns_password,basepath)
 		@server = server
@@ -42,7 +48,9 @@ class IRCBot
 	end
 	# Connects to IRC
 	def connect()
+		puts "Connecting..."
 		@irc = TCPSocket.open(@server,@port)
+		puts "Connected!"
 		send("USER MarcoBot foo bar :NieXS' MacroBot, Version 2.0")
 		send("NICK #{@nick}")
 		@connected = true;
@@ -87,7 +95,7 @@ class IRCBot
 			log(s_spaces[2],s_spaces[0],"","join")
 			if s_spaces[0].split("!")[0] == @nick then
 				@channel.push(s_spaces[2].sub(":","").downcase)
-				privmsg(s_spaces[2].sub(":",""),"Hello people!")
+				privmsg(s_spaces[2].sub(":",""),"Hello #{s_spaces[2].sub(":","")} people!")
 			end
 		elsif s_spaces[1] == "QUIT" then
 			for channel in @channel
@@ -103,7 +111,7 @@ class IRCBot
 			end
 			
 		end
-		if s_spaces[0] = @server then
+		if s_spaces[0] = ":"+@server then
 			log("Network",@server,s.strip,"network")
 		end
 	end
@@ -134,9 +142,8 @@ class IRCBot
 		return thetime
 	end
 	def handle_message(user,target,message)
-		#Timplement macros so I can uncomment that line <-- bindun
 		if target[0..0] == "#" then
-			# Stuff that is happening in a chan; commented for testing
+			# Stuff that is happening in a chan
 			check_for_macro(message,target,user) if @macros_enabled
 			check_for_command(message,target,user)
 			if message.sub("ACTION ","") == message then
@@ -185,7 +192,6 @@ class IRCBot
 		for channel in @channel
 			send("JOIN #{channel}")
 		end
-#		privmsg(@channel,"Hello everyone!")
 		privmsg("NickServ","IDENTIFY #{@ns_password}")
 	end
 	# The needed: PRIVMSG
@@ -256,8 +262,6 @@ class IRCBot
 	#
 	# Checks for ADMIN commands in messages. Format: ADMIN password ~command params
 	def check_for_admin_command(message,user)
-#		if message =~ /^ADMIN\s#{@command_identifier}(.+?)\s(.+?)\s(.+?)$/i or message =~ /^ADMIN\s#{@command_identifier}(.+?)\s(.+?)$/i then #TO#DO: remove regexes, do it like the normal command parser
-#			params = $3
 		if message[0..4] == "ADMIN" then
 			message_split = message.split # By spaces, the default
 			command = message_split[2].sub(@command_identifier,"")
@@ -274,20 +278,9 @@ class IRCBot
 			if password == "854600" then
 				case command
 					when "die"
-						# OH MY GOD THE NESTING
 						disconnect()
 					when "raw"
 						send(params)
-#					when "command" # Commented for not working
-#						if params =~ /\s/ then
-#							privmsg(user,"Don't.")
-#						else
-#							@command_identifier = params
-#							privmsg(user,"The command identifier is now #{params}")
-#						end
-#					else
-#						privmsg(user,"Unknown command, man.")
-#				end
 					when "help"
 						privmsg(user,"ADMIN commands: die, raw, help, join, part.")
 					when "join"
@@ -304,8 +297,6 @@ class IRCBot
 		end
 	end
 	def check_for_command(message,target,user)
-#		if message =~ /^#{@command_identifer}(.+?)\s(.+?)$/i or message =~ /^#{@command_identifier}(.+?)$/i then
-#			params = $2
 		if message[0..@command_identifier.length-1] == @command_identifier then #TODO: unhardcode this
 			message_split = message.split
 			command = message_split[0] if message_split[1] != nil
@@ -340,8 +331,6 @@ class IRCBot
 							privmsg(target,"Heads.")
 						when 1
 							privmsg(target,"Tails.")
-#						when 2
-#							privmsg(target,"The coin landed on its edge. Talk about the odds.")
 					end
 				when "8ball"
 					i = rand(6)
@@ -408,8 +397,6 @@ class IRCBot
 					end
 				when "die"
 					if user == "NieXS" then
-#						send("QUIT Farewell")
-#						exit()
 						disconnect()
 					else
 						privmsg(target,"Sorry Dave, I can't let you do that.")
@@ -432,11 +419,8 @@ class IRCBot
 						when false
 							@macros_enabled = true
 							privmsg(target,"Macros were re-enabled.")
-#					@macros = true; privmsg(target,"Macros are re-enabled") if @macros == false
-#					@macros = false; privmsg(target,"Macros are disabled.") if @macros == true
 					end
 				when "wiki"
-#					privmsg(target,"Wiki is really, really broken at the moment.")
 					if params != nil then
 						params = params.sub("~wiki ","")
 						privmsg(target,"Wikiing, hold on...")
@@ -453,20 +437,12 @@ class IRCBot
 					else
 						privmsg(target,"Echo what?")
 					end
-				when "tvtropes"
-#					privmsg(target,"Net::HTTP is acting up")
-					if params != nil then params = params.sub("#{@command_identifier}echo ","").strip
-						tvtropes(target,params)
-					else
-						privmsg(target,"No cookie for thou")
-					end
 				when "linecount"
-					self_file = File.open("/home/marcobot/marcobot")
+					self_file = File.open("/home/eduardo/marcobot/marcobot")
 					test = self_file.readlines
 					privmsg(target,"#{test.count} lines by now.")
 				when "faidio"
 					faidio(target)
-					
 				when "reloadmacros"
 					@macrofile = File.open("#{@basepath}macros","r")
 					@yamlmacros = YAML::load(@macrofile)
@@ -480,210 +456,6 @@ class IRCBot
 					end
 			end
 		end
-	end
-	def macrologic(message) # Outputs an array[trigger,macro,time_since_last_activation]
-		macros = []
-		triggers = []
-		outputarray = []
-		for macro in @macros
-			macro_split = macro.split(": ")
-			if message.downcase.include?(macro_split[0].downcase) and macro_split[0] != " " then
-				triggers.push macro_split[0]
-			end
-		end
-		if !triggers.empty? then
-			triggers.sort! { |x,y| y.length <=> x.length }
-			macro = @yamlmacros[triggers[0]]
-			if @macrotime[triggers[0]] != nil then
-				timeout = (Time.new - @macrotime[triggers[0]]).to_i
-			else
-				timeout = 999 # Obnoxiously large number
-				@macrotime[triggers[0]] = 999
-			end
-			return [triggers[0],macro,timeout]
-		else
-			return nil
-		end
-	end
-	def check_for_macro(message,target,user)
-		macroarray = macrologic(message)
-		if macroarray.class == Array then
-			if macroarray[2] >= 300 then
-				puts "Acceptable macro found!"
-				output = macroarray[1].chomp
-				output.gsub!("$nick",user)
-				output.gsub!("$NICK",user.upcase)
-				if output.start_with?("/me") then
-					output.sub!("/me ","")
-					emote(target,output)
-				else
-					privmsg(target,output)
-				end
-				@macrotime[macroarray[0]] = Time.new
-			end
-		end
-	end
-	def macrocheck(message,target)
-		message.sub!("#{@command_identifier}macrocheck ","") # Ugly hack
-		macroarray = macrologic(message)
-		if macroarray.class == Array then
-			if macroarray[2] >= 300 then
-				privmsg(target,"The phrase \"#{message}\" triggers the macro \"#{macroarray[1].chomp}\".")
-			else
-				timeout = (((Time.new + 300).to_i - (Time.new - (Time.new - @macrotime[macroarray[0]])).to_i) - 600)*(-1) # I DON'T EVEN UNDERSTAND THIS ANYMORE
-				privmsg(target,"The phrase \"#{message}\" will trigger the macro \"#{macroarray[1].chomp}\" in #{timeout.to_i} seconds.")
-			end
-		else
-			privmsg(target,"The phrase \"#{message}\" doesn't trigger any macro.")
-		end
-	end
-	def add_macro(channel,trigger,macro)
-		trigger = trigger.sub("~macro ","")
-		if macro != nil then macro.chomp!; end
-		puts "DEBUG: channel: #{channel}, trigger: #{trigger}, macro: #{macro}"
-		@macrofile = YAML::load(File.open("#{@basepath}macros"))
-		if trigger.gsub(" ","").length >4 then
-			if macro == nil then
-				@macrofile.delete trigger.downcase
-				privmsg(channel,"Macro removed.")
-			else
-				@macrofile[trigger.downcase] = macro
-				privmsg(channel,"Macro added.")
-			end
-		else
-			privmsg(channel,"Five chars or more, please.")
-		end
-		File.open("#{@basepath}macros","w") do |f|
-			f << @macrofile.to_yaml
-		end
-		@macrofile = File.open("#{@basepath}macros","r")
-		@yamlmacros = YAML::load(@macrofile)
-		@macrofile.rewind
-		@macros = @macrofile.readlines
-	end
-	def find_wiki(target,article,user)
-		# Threading
-		Thread.new do
-		# cocks cocks cocks
-		puts article
-#		article[0..0] = article[0..0].upcase
-		wiki = Net::HTTP.new("en.wikipedia.org",80)
-		wiki.read_timeout= 10
-		article[0..0] = article[0..0].upcase
-		article = article.gsub(" ","_")
-		reply = wiki.get("/wiki/#{article}",nil)
-		puts reply.message
-		if reply.message == "Moved Temporarily" then
-			article = reply.header["location"].sub("http://en.wikipedia.org","")
-#			reply = wiki.get(article,nil)
-			reply = wiki.get("/wiki/#{article}",nil)
-			privmsg(target,"Article: #{2.chr}#{article.sub("/wiki/","").gsub("_"," ")}#{2.chr}")
-		end
-		puts reply.message
-		if reply.message != "OK" then
-			privmsg(target,"No Such Article, Try Again")
-		else
-			outgoing = reply.body.scan(/\<\p\>(.+?)\<\/p\>$/i).uniq[0][0]
-#			outgoing = outgoing.gsub("<b>","").gsub("</b>","")
-#			outgoing = outgoing.gsub("<i>","").gsub("</i>","")
-#			outgoing = outgoing.gsub(/\s(.+?)=\"(.+?)\"/,"").gsub(/(>+)/,">") #Doesn't work
-#			puts outgoing
-			outgoing = outgoing.gsub("<b>",2.chr.to_s).gsub("</b>",2.chr.to_s)
-			outgoing = outgoing.gsub("<i>",0x1F.chr.to_s).gsub("</i>",0x1F.chr.to_s)
-#			outgoing = outgoing.gsub("<a>",0x1F.chr.to_s).gsub("</a>",0x1F.chr.to_s) # Doesn't work
-			outgoing = outgoing.gsub(/<(\/|\s)*[^(b)][^>]*>/,'')
-			if outgoing[-1..-1] == ":" then
-				listofthings = reply.body.scan(/\<\li\>(.+?)\<\/li\>$/i)
-				listofthings = listofthings.join(", ")
-#				listofthings = listofthings.gsub("<b>","").gsub("</b>","")
-#				outgoing = outgoing.gsub("<i>","").gsub("</i>","")
-				listofthings = listofthings.gsub("<b>",2.chr.to_s).gsub("</b>",2.chr.to_s)
-				listofthings = listofthings.gsub("<i>",0x1F.chr.to_s).gsub("</i>",0x1F.chr.to_s)
-				listofthings = listofthings.gsub(/<(\/|\s)*[^(b)][^>]*>/,'')
-				outgoing = outgoing + " " + listofthings + "."
-			elsif outgoing[0,12] == "Coordinates:"
-				outgoing = reply.body.scan(/\<\p\>(.+?)\<\/p\>$/i).uniq[1][0] # Doesn't work. TODO: Make it work
-				outgoing = outgoing.gsub("<b>",2.chr.to_s).gsub("</b>",2.chr.to_s)
-				outgoing = outgoing.gsub("<i>",0x1F.chr.to_s).gsub("</i>",0x1F.chr.to_s)
-				outgoing = outgoing.gsub(/<(\/|\s)*[^(b)][^>]*>/,'')
-			end
-			if outgoing.length >400 then
-#				privmsg(target,"P long, sending a PM.")
-#				outgoing1 = outgoing[0..419]
-#				outgoing2 = outgoing[420..outgoing.length-1]
-#				if outgoing2[0,1] == " " then
-#					outgoing2[0,1] = ""
-#				end
-#				privmsg(target,outgoing1)
-#				privmsg(target,outgoing2)
-				outgoing_array = outgoing.unpack("A400A400A400A400A400A400A400A400A400") # Not cool, not funny, not a good way to do things.
-				for item in outgoing_array
-					if item == "" then
-						outgoing_array.delete(item)
-#						puts 1 + "cocks" + nil # haha
-					end
-				end
-				puts outgoing_array.count
-#				if outgoing_array.count <= 2 then
-#					target = target
-#				else
-#					privmsg(target,"Sending a PM for long.")
-#					target = user
-#				end
-				for outgoing in outgoing_array
-					
-					privmsg(target,outgoing.strip.gsub("&#160;"," "))
-					sleep 0.4
-				end
-			else
-				privmsg(target,outgoing.strip.gsub("&#160;"," "))
-			end
-		end
-	end
-	end
-	def faidio(target)
-		# Threads!
-		Thread.new do
-		Net::HTTP.start("sajuuk.org",8001) do |http|
-			req = Net::HTTP::Get.new("/admin/stats.xml")
-			req.basic_auth("admin","854600")
-			reply = http.request(req)
-			$xmlfile = reply.body
-		end
-#		puts @xmlfile
-		$xmlfile = REXML::Document.new $xmlfile
-		@root = $xmlfile.root
-#		xmlfile.elements.each("icestats/sources") { |sources| $sources_num = sources.text.to_i }
-		if @root.elements["sources"].text.to_i >= 1 then
-			privmsg(target,"Streams:")
-			$xmlfile.elements.each("icestats/source") do |source|
-				mountpoint = source.attributes["mount"]
-				listeners_plus_peak = source.elements["listeners"].text+"/"+source.elements["listener_peak"].text
-				artist_title = source.elements["artist"].text+" - "+source.elements["title"].text
-				name_description = source.elements["server_name"].text+" ("+source.elements['server_description'].text+")"
-				if source.elements["listenurl"] != nil then
-					listen_url = source.elements["listenurl"].text
-				else
-					listen_url = ""
-				end
-				samplerate = source.elements["audio_samplerate"].text
-				if source.elements["ice-channels"] != nil then
-					channels = (source.elements["ice-channels"].text.to_i>1 ? "Stereo" : "Mono")
-				elsif source.elements["audio_channels"] != nil then
-					channels = (source.elements["audio_channels"].text.to_i>1 ? "Stereo" : "Mono")
-				else
-					channels = "unknown"
-				end
-				genre = source.elements["genre"].text
-				subtype = source.elements["subtype"].text
-				output = name_description+" at "+listen_url+"; Genre is "+genre+"; "+listeners_plus_peak+" listeners. Streaming in "+channels+" at "+samplerate+" Hz using "+subtype+". Now playing: "+artist_title
-				privmsg(target,output)
-			end
-				
-		else
-			privmsg(target,"No one is streaming.")
-		end
-	end
 	end
 	def dieroll(target,params)
 		if params != nil then

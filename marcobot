@@ -48,7 +48,9 @@ class IRCBot
 	end
 	# Connects to IRC
 	def connect()
+		puts "Connecting..."
 		@irc = TCPSocket.open(@server,@port)
+		puts "Connected!"
 		send("USER MarcoBot foo bar :NieXS' MacroBot, Version 2.0")
 		send("NICK #{@nick}")
 		@connected = true;
@@ -93,7 +95,7 @@ class IRCBot
 			log(s_spaces[2],s_spaces[0],"","join")
 			if s_spaces[0].split("!")[0] == @nick then
 				@channel.push(s_spaces[2].sub(":","").downcase)
-				privmsg(s_spaces[2].sub(":",""),"Hello people!")
+				privmsg(s_spaces[2].sub(":",""),"Hello #{s_spaces[2].sub(":","")} people!")
 			end
 		elsif s_spaces[1] == "QUIT" then
 			for channel in @channel
@@ -109,7 +111,7 @@ class IRCBot
 			end
 			
 		end
-		if s_spaces[0] = @server then
+		if s_spaces[0] = ":"+@server then
 			log("Network",@server,s.strip,"network")
 		end
 	end
@@ -140,9 +142,8 @@ class IRCBot
 		return thetime
 	end
 	def handle_message(user,target,message)
-		#Timplement macros so I can uncomment that line <-- bindun
 		if target[0..0] == "#" then
-			# Stuff that is happening in a chan; commented for testing
+			# Stuff that is happening in a chan
 			check_for_macro(message,target,user) if @macros_enabled
 			check_for_command(message,target,user)
 			if message.sub("ACTION ","") == message then
@@ -191,7 +192,6 @@ class IRCBot
 		for channel in @channel
 			send("JOIN #{channel}")
 		end
-#		privmsg(@channel,"Hello everyone!")
 		privmsg("NickServ","IDENTIFY #{@ns_password}")
 	end
 	# The needed: PRIVMSG
@@ -262,8 +262,6 @@ class IRCBot
 	#
 	# Checks for ADMIN commands in messages. Format: ADMIN password ~command params
 	def check_for_admin_command(message,user)
-#		if message =~ /^ADMIN\s#{@command_identifier}(.+?)\s(.+?)\s(.+?)$/i or message =~ /^ADMIN\s#{@command_identifier}(.+?)\s(.+?)$/i then #TO#DO: remove regexes, do it like the normal command parser
-#			params = $3
 		if message[0..4] == "ADMIN" then
 			message_split = message.split # By spaces, the default
 			command = message_split[2].sub(@command_identifier,"")
@@ -280,20 +278,9 @@ class IRCBot
 			if password == "854600" then
 				case command
 					when "die"
-						# OH MY GOD THE NESTING
 						disconnect()
 					when "raw"
 						send(params)
-#					when "command" # Commented for not working
-#						if params =~ /\s/ then
-#							privmsg(user,"Don't.")
-#						else
-#							@command_identifier = params
-#							privmsg(user,"The command identifier is now #{params}")
-#						end
-#					else
-#						privmsg(user,"Unknown command, man.")
-#				end
 					when "help"
 						privmsg(user,"ADMIN commands: die, raw, help, join, part.")
 					when "join"
@@ -310,8 +297,6 @@ class IRCBot
 		end
 	end
 	def check_for_command(message,target,user)
-#		if message =~ /^#{@command_identifer}(.+?)\s(.+?)$/i or message =~ /^#{@command_identifier}(.+?)$/i then
-#			params = $2
 		if message[0..@command_identifier.length-1] == @command_identifier then #TODO: unhardcode this
 			message_split = message.split
 			command = message_split[0] if message_split[1] != nil
@@ -346,8 +331,6 @@ class IRCBot
 							privmsg(target,"Heads.")
 						when 1
 							privmsg(target,"Tails.")
-#						when 2
-#							privmsg(target,"The coin landed on its edge. Talk about the odds.")
 					end
 				when "8ball"
 					i = rand(6)
@@ -414,8 +397,6 @@ class IRCBot
 					end
 				when "die"
 					if user == "NieXS" then
-#						send("QUIT Farewell")
-#						exit()
 						disconnect()
 					else
 						privmsg(target,"Sorry Dave, I can't let you do that.")
@@ -438,11 +419,8 @@ class IRCBot
 						when false
 							@macros_enabled = true
 							privmsg(target,"Macros were re-enabled.")
-#					@macros = true; privmsg(target,"Macros are re-enabled") if @macros == false
-#					@macros = false; privmsg(target,"Macros are disabled.") if @macros == true
 					end
 				when "wiki"
-#					privmsg(target,"Wiki is really, really broken at the moment.")
 					if params != nil then
 						params = params.sub("~wiki ","")
 						privmsg(target,"Wikiing, hold on...")
@@ -459,20 +437,12 @@ class IRCBot
 					else
 						privmsg(target,"Echo what?")
 					end
-				when "tvtropes"
-#					privmsg(target,"Net::HTTP is acting up")
-					if params != nil then params = params.sub("#{@command_identifier}echo ","").strip
-						tvtropes(target,params)
-					else
-						privmsg(target,"No cookie for thou")
-					end
 				when "linecount"
-					self_file = File.open("/home/marcobot/marcobot")
+					self_file = File.open("/home/eduardo/marcobot/marcobot")
 					test = self_file.readlines
 					privmsg(target,"#{test.count} lines by now.")
 				when "faidio"
 					faidio(target)
-					
 				when "reloadmacros"
 					@macrofile = File.open("#{@basepath}macros","r")
 					@yamlmacros = YAML::load(@macrofile)
