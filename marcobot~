@@ -253,7 +253,8 @@ class IRCBot
 				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user} is now known as #{message}."
 				
 		end
-		rescue Exception
+		rescue Exception => detail
+			privmsg(target,"Oh dear, an exception: #{detail.message()}")
 		end
 		@logarray[filepath].close()
 	end
@@ -454,7 +455,8 @@ class IRCBot
 					if user != "NieXS" then
 						privmsg(target,"Don't")
 					else
-						privmsg(target,eval(params.sub("#{@command_identifier}eval ","")))
+						eval(params.sub("#{@command_identifier}eval ","")+" > /tmp/eval.out")
+						privmsg(target,File.readlines("/tmp/eval.out").join("\n").gsub("\n","\\n"))
 					end
 			end
 		end
@@ -514,13 +516,12 @@ begin
 rescue Interrupt
 	irc.privmsg("#faid3.0","Going down!")
 rescue Exception => detail
-	puts "HALP! Forward this to NieXS:"
 	puts detail.message()
 	puts "Backtrace:"
 	for i in detail.backtrace()
 		puts i 
 	end
-	irc.privmsg("#faid3.0","OH SHIT EXCEPTION")
+	irc.privmsg("#faid3.0","Oh dear, an exception: #{detail.message()}")
 	sleep 1
 	retry
 rescue exit

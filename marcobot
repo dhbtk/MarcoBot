@@ -17,7 +17,7 @@ class IRCBot
 	include Wiki
 	include Macros
 	# initialize: get these nasty vars and make them globals.
-	def initialize(server,port,nick,autojoin_channels,ns_password,basepath)
+	def initialize(server,port,nick,autojoin_channels,ns_password,basepath,configfile)
 		@server = server
 		@port = port
 		@nick = nick
@@ -37,7 +37,7 @@ class IRCBot
 		@yamlmacros = YAML::load(@macrofile)
 		@macrofile.rewind
 		@macros = @macrofile.readlines
-		
+		@configfile = configfile
 #		@blocking = false
 	end
 	# sends stuff through the socket
@@ -455,7 +455,8 @@ class IRCBot
 					if user != "NieXS" then
 						privmsg(target,"Don't")
 					else
-						privmsg(target,eval(params.sub("#{@command_identifier}eval ","")))
+						eval(params.sub("#{@command_identifier}eval ",""))
+						
 					end
 			end
 		end
@@ -490,7 +491,7 @@ class IRCBot
 end
 # Go! Go! Go!
 configfile = YAML::load(File.open("/home/eduardo/.marcobot/marcobotrc"))
-irc = IRCBot.new(configfile["server"],configfile['port'],configfile['nickname'],configfile['channels'],configfile['nickserv_password'],configfile['basepath'])
+irc = IRCBot.new(configfile["server"],configfile['port'],configfile['nickname'],configfile['channels'],configfile['nickserv_password'],configfile['basepath'],configfile)
 begin
 	irc.connect()
 rescue Exception => detail
@@ -515,7 +516,6 @@ begin
 rescue Interrupt
 	irc.privmsg("#faid3.0","Going down!")
 rescue Exception => detail
-	puts "HALP! Forward this to NieXS:"
 	puts detail.message()
 	puts "Backtrace:"
 	for i in detail.backtrace()
