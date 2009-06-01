@@ -35,11 +35,11 @@ module Faidio
 				genre = source.elements["genre"].text
 				subtype = source.elements["subtype"].text
 				output = name_description+" at "+listen_url+"; Genre is "+genre+"; "+listeners_plus_peak+" listeners. Streaming in "+channels+" at "+samplerate+" Hz using "+subtype+". Now playing: "+artist_title
-				privmsg(target,output)
+				privmsg(target,output,2)
 			end
 				
 		else
-			privmsg(target,"No one is streaming.")
+			privmsg(target,"No one is streaming.",2)
 		end
 	end
 	end

@@ -38,6 +38,7 @@ class IRCBot
 		@macrofile.rewind
 		@macros = @macrofile.readlines
 		@configfile = configfile
+		@message_queue = []
 #		@blocking = false
 	end
 	# sends stuff through the socket
@@ -117,15 +118,30 @@ class IRCBot
 	end
 	# Looping and looping and looping again...
 	def main_loop()
-		while true and @connected
-			ready = select([@irc],nil,nil,nil)
-			next if !ready
-			for s in ready[0]
+		while @connected
+			ready = select([@irc],nil,nil,0.5)
+			if ready then
 				return if @irc.eof
 				s = @irc.gets
 				rawlog(s)
-				handle_server_input(s)		
-			end			
+				handle_server_input(s)
+			end
+			handle_queve()	
+		end
+	end
+	def handle_queve()
+		if !@message_queue.empty? then
+			message = @message_queue[0]
+			@message_queue.delete message
+			case message[2]
+				when 0
+					puts "High-priority message"
+				when 1
+					sleep 0.3
+				else
+					sleep 1
+			end
+			send_message(message[0],message[1])
 		end
 	end
 	def rawlog(s)
@@ -197,10 +213,13 @@ class IRCBot
 		privmsg("NickServ","IDENTIFY #{@ns_password}")
 	end
 	# The needed: PRIVMSG
-	def privmsg(target,message)
+	def privmsg(target,message,priority = 1)
+		@message_queue.push([target,message,priority])
+	end
+	def send_message(target,message)
 		send("PRIVMSG #{target} :#{message}")
 		log(target,@nick,message,"privmsg")
-	end
+	end		
 	# Because everyone loves /me
 	def emote(target,message)
 		privmsg(target,"ACTION #{message}")
@@ -280,7 +299,7 @@ class IRCBot
 				params = params.sub("   ","")
 			end
 			# It is a command. Let's see...
-			if password == "854600" then
+			if password == @configfile['adminpassword'] then
 				case command
 					when "die"
 						disconnect()
@@ -315,6 +334,36 @@ class IRCBot
 			end
 			case command
 				when "help"
+					if params == nil then
+						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~dieroll, ~faidio, ~stfu. Run \"#{@command_identifier}help ~command\" to get a more specific help.")
+					elsif params.strip == @command_identifier+"help ~help" then
+						privmsg(target,"Usage: ~help ~command.")
+					elsif params.strip == @command_identifier+"help ~coinflip" then
+						privmsg(target,"Flips a coin [citation needed] and shows the outcome. Can also be used as \"ACTION flips a coin\"")
+					elsif params.strip == @command_identifier+"help ~8ball" then
+						privmsg(target,"Ask a question to the mighty 8-ball. \"Should I?\" questions are preferred.")
+					elsif params.strip == @command_identifier+"help ~leave" then
+						privmsg(target,"Adds a vote for me to leave. Six votes = leave channel.")
+					elsif params.strip == @command_identifier+"help ~live" then
+						privmsg(target,"Unvotes.")
+					elsif params.strip == @command_identifier+"help ~thetime" then
+						privmsg(target,"Prints the local time.")
+					elsif params.strip == @command_identifier+"help ~shutup" then
+						privmsg(target,"Toggles macros.")
+					elsif params.strip == @command_identifier+"help ~macro" then
+						privmsg(target,"Sets macros. They must have more than five characters. Setting them to a space removes them. Usage: ~macro input phrase=output phrase")
+					elsif params.strip == @command_identifier+"help ~wiki" then
+						privmsg(target,"Usage: ~wiki Article. Case-sensitive. Buggy as hell, use at your own risk.")
+					elsif params.strip == @command_identifier+"help ~dieroll" then
+						privmsg(target,"Usage: \"~dieroll (one)d(two)\" or \" ACTION rolls (one)d(two)\". One must be smaller than 11, and two must be smaller than 20,000.")
+					elsif params.strip == @command_identifier+"help ~faidio" then
+						privmsg(target,"Shows the FaiDio streams.")
+					elsif params.strip == @command_identifier+"help ~stfu" then
+						privmsg(target,"Clears the message queue. Useful for spam-y situations.")
+					else
+						send("NOTICE #{user} :No such command. Contradictions are lies.")
+					end
+=begin
 					privmsg(user,"Commands:")
 					privmsg(user,"~help     : Shows this help.")
 					privmsg(user,"~coinflip : Flips a coin [citation needed] and shows the outcome.")
@@ -329,10 +378,11 @@ class IRCBot
 					privmsg(user,"~echo     : echo echo cho cho o o")
 					privmsg(user,"~linecount: Number of lines in the source code.")
 					privmsg(user,"~faidio   : Shows FaiDio streams.")
+=end
 				when "coinflip"
 					coinflip(target)
 				when "8ball"
-					i = rand(6)
+					i = rand(8)
 					case i 
 						when 0
 							privmsg(target,"Of course.")
@@ -346,6 +396,10 @@ class IRCBot
 							privmsg(target,"Don't or you will suffer.")
 						when 5
 							privmsg(target,"You can't know for sure.")
+						when 6
+							privmsg(target,"You totally should.")
+						when 7
+							privmsg(target,"YES! DO IT!")
 					end
 				when "leave"
 					 if target[0..0] == "#" then
@@ -454,6 +508,9 @@ class IRCBot
 						eval(params.sub("#{@command_identifier}eval ",""))
 						
 					end
+				when "stfu"
+					@message_queue.clear
+					privmsg(target,"Outgoing queue cleared.",2)
 			end
 		end
 	end
@@ -495,6 +552,11 @@ class IRCBot
 	end
 end
 # Go! Go! Go!
+if ARGV[0] == "--dev" then
+irc = IRCBot.new("127.0.0.1",'6667','Marco','#FaiD','854600','/home/eduardo/marcobot/',{"adminpassword"=>"854600"})
+irc.connect()
+irc.main_loop()
+else
 configfile = YAML::load(File.open("/home/eduardo/.marcobot/marcobotrc"))
 irc = IRCBot.new(configfile["server"],configfile['port'],configfile['nickname'],configfile['channels'],configfile['nickserv_password'],configfile['basepath'],configfile)
 begin
@@ -519,15 +581,16 @@ end
 begin
 	irc.main_loop()
 rescue Interrupt
-	irc.privmsg("#faid3.0","Going down!")
+	irc.privmsg("#faid3.0","Going down!",0)
 rescue Exception => detail
 	puts detail.message()
 	puts "Backtrace:"
 	for i in detail.backtrace()
 		puts i 
 	end
-	irc.privmsg("#faid3.0","Oh dear, an exception: #{detail.message()}")
+	irc.privmsg("#faid3.0","Oh dear, an exception: #{detail.message()}",0)
 	sleep 1
 	retry
 rescue exit
+end
 end

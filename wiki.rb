@@ -14,12 +14,14 @@ module Wiki
 		if reply.message == "Moved Temporarily" then
 			article = reply.header["location"].sub("http://en.wikipedia.org","")
 #			reply = wiki.get(article,nil)
+			article = article.gsub(" ","_").sub("/wiki/")
+			puts article
 			reply = wiki.get("/wiki/#{article}",nil)
-			privmsg(target,"Article: #{2.chr}#{article.sub("/wiki/","").gsub("_"," ")}#{2.chr}")
+			privmsg(target,"Article: #{2.chr}#{article.sub("/wiki/","").gsub("_"," ")}#{2.chr}",2)
 		end
 		puts reply.message
 		if reply.message != "OK" then
-			privmsg(target,"No Such Article, Try Again")
+			privmsg(target,"No Such Article, Try Again",2)
 		else
 			outgoing = reply.body.scan(/\<\p\>(.+?)\<\/p\>$/i).uniq[0][0]
 #			outgoing = outgoing.gsub("<b>","").gsub("</b>","")
@@ -70,11 +72,11 @@ module Wiki
 #				end
 				for outgoing in outgoing_array
 					
-					privmsg(target,outgoing.strip.gsub("&#160;"," "))
+					privmsg(target,outgoing.strip.gsub("&#160;"," "),2)
 					sleep 0.4
 				end
 			else
-				privmsg(target,outgoing.strip.gsub("&#160;"," "))
+				privmsg(target,outgoing.strip.gsub("&#160;"," "),2)
 			end
 		end
 	end

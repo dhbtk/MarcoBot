@@ -35,7 +35,7 @@ module Macros
 					output.sub!("/me ","")
 					emote(target,output)
 				else
-					privmsg(target,output)
+					privmsg(target,output,0)
 				end
 				@macrotime[macroarray[0]] = Time.new
 			end
@@ -46,13 +46,13 @@ module Macros
 		macroarray = macrologic(message)
 		if macroarray.class == Array then
 			if macroarray[2] >= 300 then
-				privmsg(target,"The phrase \"#{message}\" triggers the macro \"#{macroarray[1].chomp}\".")
+				privmsg(target,"The phrase \"#{message}\" triggers the macro \"#{macroarray[1].chomp}\".",0)
 			else
 				timeout = (((Time.new + 300).to_i - (Time.new - (Time.new - @macrotime[macroarray[0]])).to_i) - 600)*(-1) # I DON'T EVEN UNDERSTAND THIS ANYMORE
-				privmsg(target,"The phrase \"#{message}\" will trigger the macro \"#{macroarray[1].chomp}\" in #{timeout.to_i} seconds.")
+				privmsg(target,"The phrase \"#{message}\" will trigger the macro \"#{macroarray[1].chomp}\" in #{timeout.to_i} seconds.",0)
 			end
 		else
-			privmsg(target,"The phrase \"#{message}\" doesn't trigger any macro.")
+			privmsg(target,"The phrase \"#{message}\" doesn't trigger any macro.",0)
 		end
 	end
 	def add_macro(channel,trigger,macro)
