@@ -335,7 +335,7 @@ class IRCBot
 			case command
 				when "help"
 					if params == nil then
-						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~dieroll, ~faidio, ~stfu. Run \"#{@command_identifier}help ~command\" to get a more specific help.")
+						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~dieroll, ~faidio, ~faidwiki, ~stfu. Run \"#{@command_identifier}help ~command\" to get a more specific help.")
 					elsif params.strip == @command_identifier+"help ~help" then
 						privmsg(target,"Usage: ~help ~command.")
 					elsif params.strip == @command_identifier+"help ~coinflip" then
@@ -360,6 +360,8 @@ class IRCBot
 						privmsg(target,"Shows the FaiDio streams.")
 					elsif params.strip == @command_identifier+"help ~stfu" then
 						privmsg(target,"Clears the message queue. Useful for spam-y situations.")
+					elsif params.strip == @command_identifier+"help ~faidwiki" then
+						privmsg(target,"Looks up an article on the FaiDwiki.")
 					else
 						send("NOTICE #{user} :No such command. Contradictions are lies.")
 					end
@@ -481,6 +483,15 @@ class IRCBot
 					else
 						privmsg(target,"Getting a random, hold on...")
 						find_wiki(target,"Special:Random",user)
+					end
+				when "faidwiki"
+					if params != nil then
+						params = params.sub("~faidwiki ","")
+						privmsg(target,"Looking up...")
+						find_faidwiki(target,params,user)
+					else
+						privmsg(target,"Getting a random, hold on...")
+						find_faidwiki(target,"Special:Random",user)
 					end
 				when "dieroll"
 					dieroll(target,params)
