@@ -15,8 +15,8 @@ module Macros
 			if @macrotime[triggers[0]] != nil then
 				timeout = (Time.new - @macrotime[triggers[0]]).to_i
 			else
-				timeout = 999 # Obnoxiously large number
-				@macrotime[triggers[0]] = 999
+				timeout = @configfile['macrotimeout'].to_i() + 1 # Obnoxiously large number
+				@macrotime[triggers[0]] = @configfile['macrotimeout'].to_i() +1
 			end
 			return [triggers[0],macro,timeout]
 		else
@@ -26,7 +26,7 @@ module Macros
 	def check_for_macro(message,target,user)
 		macroarray = macrologic(message)
 		if macroarray.class == Array then
-			if macroarray[2] >= 300 then
+			if macroarray[2] >= @configfile['macrotimeout'].to_i then
 				puts "Acceptable macro found!"
 				output = macroarray[1].chomp
 				output.gsub!("$nick",user)
@@ -45,10 +45,10 @@ module Macros
 		message.sub!("#{@command_identifier}macrocheck ","") # Ugly hack
 		macroarray = macrologic(message)
 		if macroarray.class == Array then
-			if macroarray[2] >= 300 then
+			if macroarray[2] >= @configfile['macrotimeout'].to_i then
 				privmsg(target,"The phrase \"#{message}\" triggers the macro \"#{macroarray[1].chomp}\".",0)
 			else
-				timeout = (((Time.new + 300).to_i - (Time.new - (Time.new - @macrotime[macroarray[0]])).to_i) - 600)*(-1) # I DON'T EVEN UNDERSTAND THIS ANYMORE
+				timeout = (((Time.new + @configfile['macrotimeout'].to_i).to_i - (Time.new - (Time.new - @macrotime[macroarray[0]])).to_i) - @configfile['macrotimeout'].to_i)*(-1) # I DON'T EVEN UNDERSTAND THIS ANYMORE
 				privmsg(target,"The phrase \"#{message}\" will trigger the macro \"#{macroarray[1].chomp}\" in #{timeout.to_i} seconds.",0)
 			end
 		else

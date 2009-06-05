@@ -3,7 +3,7 @@
 # Firstly, the basics. Commands will come later. <-- are already coming (TWSS)
 # Already supports:
 # fucktons of things
-#require 'rubygems'
+require 'rubygems'
 require "socket"
 require "yaml"
 require "net/http"
@@ -11,8 +11,10 @@ require "rexml/document"
 require "./faidio.rb"
 require "./wiki.rb"
 require "./macros.rb"
+require "rwikibot" # MWHAHAHHAHA
 #require "hpricot"
 class IRCBot
+	attr_accessor :rawlogfile, :logarray, :configfile
 	include Faidio
 	include Wiki
 	include Macros
@@ -40,6 +42,7 @@ class IRCBot
 		@configfile = configfile
 		@message_queue = []
 #		@blocking = false
+		
 	end
 	# sends stuff through the socket
 	def send(message)
@@ -72,7 +75,7 @@ class IRCBot
 			user = s_spaces[0].sub(":","").split("!")[0]
 			target = s_spaces[2]
 			message = s_colons.join(":").sub(s_colons[1],"").sub("::","")
-			handle_message(user,target,message)
+			handle_message(user,target,message,s_spaces[0].sub(":",""))
 		elsif s_spaces[1] == "INVITE" then
 			handle_invite(s_spaces[3])
 		elsif s_spaces[1] == "TOPIC" then
@@ -93,7 +96,7 @@ class IRCBot
 				@channel.delete(s_spaces[2].downcase)
 			end
 		elsif s_spaces[1] == "JOIN" then
-			log(s_spaces[2],s_spaces[0],"","join")
+			log(s_spaces[2].sub(":",""),s_spaces[0],"","join")
 			if s_spaces[0].split("!")[0] == @nick then
 				@channel.push(s_spaces[2].sub(":","").downcase)
 				privmsg(s_spaces[2].sub(":",""),"Hello #{s_spaces[2].sub(":","")} people!")
@@ -126,10 +129,10 @@ class IRCBot
 				rawlog(s)
 				handle_server_input(s)
 			end
-			handle_queve()	
+			handle_queue()	
 		end
 	end
-	def handle_queve()
+	def handle_queue()
 		if !@message_queue.empty? then
 			message = @message_queue[0]
 			@message_queue.delete message
@@ -146,9 +149,9 @@ class IRCBot
 	end
 	def rawlog(s)
 #		puts "#{timestamp(Time.new)} #{s}" 
-		@rawlogfile = File.open("/var/log/marcobot/rawlog","a+")
+		@rawlogfile = File.open("/var/log/marcobot/rawlog","a+") if @rawlogfile.class != File
 		@rawlogfile.puts("#{timestamp(Time.new)}> #{s}")
-		@rawlogfile.close()
+		
 	end
 	def timestamp(time) # Pretty timestamps!
 		hour = (time.hour<10 ? "0"+time.hour.to_s : time.hour)
@@ -157,11 +160,11 @@ class IRCBot
 		thetime = "[#{hour}:#{minute}:#{second}]"
 		return thetime
 	end
-	def handle_message(user,target,message)
+	def handle_message(user,target,message,usermask)
 		if target[0..0] == "#" then
 			# Stuff that is happening in a chan
 			check_for_macro(message,target,user) if @macros_enabled
-			check_for_command(message,target,user)
+			check_for_command(message,target,user,usermask)
 			if message.sub("ACTION ","") == message then
 				log(target,user,message,"privmsg")
 			else
@@ -229,7 +232,7 @@ class IRCBot
 	def log(target,user,message,command)
 		filepath = "/var/log/marcobot/logs/#{target.strip}-#{Time.new.day}-#{Time.new.month}-#{Time.new.year}".downcase
 		if File.exists?(filepath) then
-			@logarray[filepath] = File.open(filepath,"a")
+			@logarray[filepath] = File.open(filepath,"a") if @logarray[filepath].class != File
 		else
 			@logarray[filepath] = File.new(filepath,"a")
 		end
@@ -277,7 +280,14 @@ class IRCBot
 		rescue Exception => detail
 			privmsg(target,"Oh dear, an exception: #{detail.message()}")
 		end
-		@logarray[filepath].close()
+		
+	end
+	def is_auth_user?(user)
+		if @configfile['authnicks'].downcase.split(",").member?(user.downcase) then
+			return true
+		else
+			return false
+		end
 	end
 	#
 	#|------------------------------|
@@ -286,9 +296,9 @@ class IRCBot
 	#
 	# Checks for ADMIN commands in messages. Format: ADMIN password ~command params
 	def check_for_admin_command(message,user)
-		if message[0..4] == "ADMIN" then
+		if message.start_with?(@configfile['admincommandidentifier']) then
 			message_split = message.split # By spaces, the default
-			command = message_split[2].sub(@command_identifier,"")
+			command = message_split[2].sub(@configfile['admincommandidentifier'],"")
 			password = message_split[1]
 			# Params are slightly more complicated. We need to set message_split[0,1,2] to nil first, and then join the message via spaces, and then strip the first three spaces. IF there is a param.
 			if message_split[3] != nil then
@@ -320,7 +330,7 @@ class IRCBot
 			end
 		end
 	end
-	def check_for_command(message,target,user)
+	def check_for_command(message,target,user,usermask)
 		if message[0..@command_identifier.length-1] == @command_identifier then #TODO: unhardcode this
 			message_split = message.split
 			command = message_split[0] if message_split[1] != nil
@@ -451,7 +461,7 @@ class IRCBot
 						privmsg(target,"What the cruds are you trying to do?")
 					end
 				when "die"
-					if user == "NieXS" then
+					if is_auth_user?(usermask.split("@")[0]) then
 						disconnect()
 					else
 						privmsg(target,"Sorry Dave, I can't let you do that.")
@@ -508,20 +518,62 @@ class IRCBot
 				when "faidio"
 					faidio(target)
 				when "reloadmacros"
-					@macrofile = File.open("#{@basepath}macros","r")
-					@yamlmacros = YAML::load(@macrofile)
-					@macrofile.rewind
-					@macros = @macrofile.readlines
-				when "eval"
-					if user != "NieXS" then
-						privmsg(target,"Don't")
+					if is_auth_user?(usermask.split("@")[0]) then
+						@macrofile = File.open("#{@basepath}macros","r")
+						@yamlmacros = YAML::load(@macrofile)
+						@macrofile.rewind
+						@macros = @macrofile.readlines
 					else
+						privmsg(target,"I'm sorry Dave, I can't let you do that.")
+					end
+				when "eval"
+					if is_auth_user?(usermask.split("@")[0]) then
 						eval(params.sub("#{@command_identifier}eval ",""))
-						
+					else
+						privmsg(target,"I'm sorry Dave, I can't let you do that.")						
 					end
 				when "stfu"
 					@message_queue.clear
-					privmsg(target,"Outgoing queue cleared.",2)
+					privmsg(target,"Outgoing message queue cleared.",2)
+				when "listconfig"
+					if is_auth_user?(usermask.split("@")[0]) then
+						outgoing = ""
+						@configfile.each do |f|
+							outgoing = "#{outgoing}#{f[0]}: #{f[1]}; "
+						end
+						privmsg(user,outgoing,2)
+						privmsg(target,"Full list PM'd.")
+					else
+						outgoing = ""
+						@configfile.each do |f|
+							outgoing = "#{outgoing}#{f[0]}: #{f[1]}; " if f[0].include?("password") == false and f[0].include?("basepath") == false and f[0].include?("authnicks") == false
+						end
+						privmsg(target,"Sending a neutered list.")
+						privmsg(target,outgoing)
+					end
+				when "config"
+					if is_auth_user?(usermask.split("@")[0]) then
+						params = params.sub(@command_identifier+"config","").strip
+						if params =~ /(.+?)=(.+?)/ then
+							config = params.split("=")[0]
+							config_params = params.sub(params.split("=")[0]+"=","")
+							@configfile[config] = config_params
+							privmsg(target,"Config option \"#{config}\" has been set to \"#{config_params}\".")
+						else
+							privmsg(target,"Wrong")
+						end
+					else
+						privmsg(target,"Can't do that man")
+					end
+				when "saveconfig"
+					if is_auth_user?(usermask.split("@")[0]) then
+						File.open("/home/eduardo/.marcobot/marcobotrc","w") do |f|
+							f << @configfile.to_yaml
+						end
+						privmsg(target,"Config file saved.")
+					else
+						privmsg(target,"You can't do that man")
+					end
 			end
 		end
 	end
@@ -602,6 +654,16 @@ rescue Exception => detail
 	irc.privmsg("#faid3.0","Oh dear, an exception: #{detail.message()}",0)
 	sleep 1
 	retry
-rescue exit
+ensure
+	puts "Saving logs..."
+	irc.logarray.each do |f|
+		puts f
+		f[1].close
+	end
+	irc.rawlogfile.close
+	File.open("/home/eduardo/.marcobot/marcobotrc","w") do |f|
+		f << irc.configfile.to_yaml
+	end
+	
 end
 end
