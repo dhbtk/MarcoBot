@@ -2,7 +2,7 @@ module Faidio
 	def faidio(target)
 		# Threads!
 		Thread.new do
-		Net::HTTP.start("sajuuk.org",8001) do |http|
+		Net::HTTP.start("theqcontinuum.net",8001) do |http|
 			req = Net::HTTP::Get.new("/admin/stats.xml")
 			req.basic_auth("admin","854600")
 			reply = http.request(req)
