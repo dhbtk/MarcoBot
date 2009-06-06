@@ -1,4 +1,5 @@
 module Faidio
+	# Checks for streams on ze faidio
 	def faidio(target)
 		# Threads!
 		Thread.new do
