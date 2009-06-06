@@ -1,4 +1,7 @@
 module Macros
+	# Macrologic checks for macros on that message.
+	# It returns an array with the trigger, the macro and the time since the last activation.
+	# Is used by macrocheck() and check_for_macro().
 	def macrologic(message) # Outputs an array[trigger,macro,time_since_last_activation]
 		macros = []
 		triggers = []
@@ -23,6 +26,8 @@ module Macros
 			return nil
 		end
 	end
+	# Checks for a macro on the message. If found, and the timeout >= timeout set in
+	# the settings file, it is outputted.
 	def check_for_macro(message,target,user)
 		macroarray = macrologic(message)
 		if macroarray.class == Array then
@@ -41,6 +46,8 @@ module Macros
 			end
 		end
 	end
+	# Does the same as check_for_macro, but displays it only when asked for and
+	# says the timeout time too. Rather neat.
 	def macrocheck(message,target)
 		message.sub!("#{@command_identifier}macrocheck ","") # Ugly hack
 		macroarray = macrologic(message)

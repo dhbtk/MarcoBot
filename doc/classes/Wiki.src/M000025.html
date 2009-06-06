@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>find_faidwiki (Wiki)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File wiki.rb, line 85</span>
+        <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">find_faidwiki</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">article</span>,<span class="ruby-identifier">user</span>)
+                <span class="ruby-comment cmt"># Threading</span>
+                <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">new</span> <span class="ruby-keyword kw">do</span>
+                <span class="ruby-comment cmt"># cocks cocks cocks</span>
+                <span class="ruby-identifier">puts</span> <span class="ruby-identifier">article</span>
+<span class="ruby-comment cmt">#               article[0..0] = article[0..0].upcase</span>
+                <span class="ruby-identifier">wiki</span> = <span class="ruby-constant">Net</span><span class="ruby-operator">::</span><span class="ruby-constant">HTTP</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value str">&quot;faidwiki.niexs.net&quot;</span>,<span class="ruby-value">80</span>)
+                <span class="ruby-identifier">wiki</span>.<span class="ruby-identifier">read_timeout</span>= <span class="ruby-value">10</span>
+                <span class="ruby-identifier">article</span>[<span class="ruby-value">0</span><span class="ruby-operator">..</span><span class="ruby-value">0</span>] = <span class="ruby-identifier">article</span>[<span class="ruby-value">0</span><span class="ruby-operator">..</span><span class="ruby-value">0</span>].<span class="ruby-identifier">upcase</span>
+                <span class="ruby-identifier">article</span> = <span class="ruby-identifier">article</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-value str">&quot; &quot;</span>,<span class="ruby-value str">&quot;_&quot;</span>)
+                <span class="ruby-identifier">reply</span> = <span class="ruby-identifier">wiki</span>.<span class="ruby-identifier">get</span>(<span class="ruby-node">&quot;/index.php/#{article}&quot;</span>,<span class="ruby-keyword kw">nil</span>)
+                <span class="ruby-identifier">puts</span> <span class="ruby-identifier">reply</span>.<span class="ruby-identifier">message</span>
+                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">reply</span>.<span class="ruby-identifier">message</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;Moved Temporarily&quot;</span> <span class="ruby-keyword kw">then</span>
+                        <span class="ruby-identifier">article</span> = <span class="ruby-identifier">reply</span>.<span class="ruby-identifier">header</span>[<span class="ruby-value str">&quot;location&quot;</span>].<span class="ruby-identifier">sub</span>(<span class="ruby-value str">&quot;http://faidwiki.niexs.net&quot;</span>,<span class="ruby-value str">&quot;&quot;</span>)
+<span class="ruby-comment cmt">#                       reply = wiki.get(article,nil)</span>
+                        <span class="ruby-identifier">article</span> = <span class="ruby-identifier">article</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-value str">&quot; &quot;</span>,<span class="ruby-value str">&quot;_&quot;</span>).<span class="ruby-identifier">sub</span>(<span class="ruby-value str">&quot;/index.php/&quot;</span>)
+                        <span class="ruby-identifier">puts</span> <span class="ruby-identifier">article</span>
+                        <span class="ruby-identifier">reply</span> = <span class="ruby-identifier">wiki</span>.<span class="ruby-identifier">get</span>(<span class="ruby-node">&quot;/index.php/#{article}&quot;</span>,<span class="ruby-keyword kw">nil</span>)
+                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;Article: #{2.chr}#{article.sub(&quot;/wiki/&quot;,&quot;&quot;).gsub(&quot;_&quot;,&quot; &quot;)}#{2.chr}&quot;</span>,<span class="ruby-value">2</span>)
+                <span class="ruby-keyword kw">end</span>
+                <span class="ruby-identifier">puts</span> <span class="ruby-identifier">reply</span>.<span class="ruby-identifier">message</span>
+                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">reply</span>.<span class="ruby-identifier">message</span> <span class="ruby-operator">!=</span> <span class="ruby-value str">&quot;OK&quot;</span> <span class="ruby-keyword kw">then</span>
+                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;No Such Article, Try Again&quot;</span>,<span class="ruby-value">2</span>)
+                <span class="ruby-keyword kw">else</span>
+                        <span class="ruby-identifier">outgoing</span> = <span class="ruby-identifier">reply</span>.<span class="ruby-identifier">body</span>.<span class="ruby-identifier">scan</span>(<span class="ruby-regexp re">/$&lt;p&gt;(.+?)&lt;\/p&gt;$/</span>)
+                        <span class="ruby-identifier">puts</span> <span class="ruby-identifier">outgoing</span>
+                        <span class="ruby-identifier">outgoing</span> = <span class="ruby-value str">&quot;&quot;</span>
+<span class="ruby-comment cmt">#                       outgoing = outgoing.gsub(&quot;&lt;b&gt;&quot;,&quot;&quot;).gsub(&quot;&lt;/b&gt;&quot;,&quot;&quot;)</span>
+<span class="ruby-comment cmt">#                       outgoing = outgoing.gsub(&quot;&lt;i&gt;&quot;,&quot;&quot;).gsub(&quot;&lt;/i&gt;&quot;,&quot;&quot;)</span>
+<span class="ruby-comment cmt">#                       outgoing = outgoing.gsub(/\s(.+?)=\&quot;(.+?)\&quot;/,&quot;&quot;).gsub(/(&gt;+)/,&quot;&gt;&quot;) #Doesn't work</span>
+<span class="ruby-comment cmt">#                       puts outgoing</span>
+                        <span class="ruby-identifier">outgoing</span> = <span class="ruby-identifier">outgoing</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-value str">&quot;&lt;b&gt;&quot;</span>,<span class="ruby-value">2</span>.<span class="ruby-identifier">chr</span>.<span class="ruby-identifier">to_s</span>).<span class="ruby-identifier">gsub</span>(<span class="ruby-value str">&quot;&lt;/b&gt;&quot;</span>,<span class="ruby-value">2</span>.<span class="ruby-identifier">chr</span>.<span class="ruby-identifier">to_s</span>)
+                        <span class="ruby-identifier">outgoing</span> = <span class="ruby-identifier">outgoing</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-value str">&quot;&lt;i&gt;&quot;</span>,<span class="ruby-value">0x1</span><span class="ruby-constant">F</span>.<span class="ruby-identifier">chr</span>.<span class="ruby-identifier">to_s</span>).<span class="ruby-identifier">gsub</span>(<span class="ruby-value str">&quot;&lt;/i&gt;&quot;</span>,<span class="ruby-value">0x1</span><span class="ruby-constant">F</span>.<span class="ruby-identifier">chr</span>.<span class="ruby-identifier">to_s</span>)
+<span class="ruby-comment cmt">#                       outgoing = outgoing.gsub(&quot;&lt;a&gt;&quot;,0x1F.chr.to_s).gsub(&quot;&lt;/a&gt;&quot;,0x1F.chr.to_s) # Doesn't work</span>
+                        <span class="ruby-identifier">outgoing</span> = <span class="ruby-identifier">outgoing</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp re">/&lt;(\/|\s)*[^(b)][^&gt;]*&gt;/</span>,<span class="ruby-value str">''</span>)
+                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">outgoing</span>.<span class="ruby-identifier">length</span> <span class="ruby-operator">&gt;</span><span class="ruby-value">400</span> <span class="ruby-keyword kw">then</span>
+<span class="ruby-comment cmt">#                               privmsg(target,&quot;P long, sending a PM.&quot;)</span>
+<span class="ruby-comment cmt">#                               outgoing1 = outgoing[0..419]</span>
+<span class="ruby-comment cmt">#                               outgoing2 = outgoing[420..outgoing.length-1]</span>
+<span class="ruby-comment cmt">#                               if outgoing2[0,1] == &quot; &quot; then</span>
+<span class="ruby-comment cmt">#                                       outgoing2[0,1] = &quot;&quot;</span>
+<span class="ruby-comment cmt">#                               end</span>
+<span class="ruby-comment cmt">#                               privmsg(target,outgoing1)</span>
+<span class="ruby-comment cmt">#                               privmsg(target,outgoing2)</span>
+                                <span class="ruby-identifier">outgoing_array</span> = <span class="ruby-identifier">outgoing</span>.<span class="ruby-identifier">unpack</span>(<span class="ruby-value str">&quot;A400A400A400A400A400A400A400A400A400&quot;</span>) <span class="ruby-comment cmt"># Not cool, not funny, not a good way to do things.</span>
+                                <span class="ruby-keyword kw">for</span> <span class="ruby-identifier">item</span> <span class="ruby-keyword kw">in</span> <span class="ruby-identifier">outgoing_array</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">item</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">outgoing_array</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">item</span>)
+<span class="ruby-comment cmt">#                                               puts 1 + &quot;cocks&quot; + nil # haha</span>
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-identifier">outgoing_array</span>.<span class="ruby-identifier">count</span>
+<span class="ruby-comment cmt">#                               if outgoing_array.count &lt;= 2 then</span>
+<span class="ruby-comment cmt">#                                       target = target</span>
+<span class="ruby-comment cmt">#                               else</span>
+<span class="ruby-comment cmt">#                                       privmsg(target,&quot;Sending a PM for long.&quot;)</span>
+<span class="ruby-comment cmt">#                                       target = user</span>
+<span class="ruby-comment cmt">#                               end</span>
+                                <span class="ruby-keyword kw">for</span> <span class="ruby-identifier">outgoing</span> <span class="ruby-keyword kw">in</span> <span class="ruby-identifier">outgoing_array</span>
+                                        
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">outgoing</span>.<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-value str">&quot;&amp;#160;&quot;</span>,<span class="ruby-value str">&quot; &quot;</span>),<span class="ruby-value">2</span>)
+                                        <span class="ruby-identifier">sleep</span> <span class="ruby-value">0</span><span class="ruby-value">.4</span>
+                                <span class="ruby-keyword kw">end</span>
+                        <span class="ruby-keyword kw">else</span>
+                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">outgoing</span>.<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-value str">&quot;&amp;#160;&quot;</span>,<span class="ruby-value str">&quot; &quot;</span>),<span class="ruby-value">2</span>)
+                        <span class="ruby-keyword kw">end</span>
+                <span class="ruby-keyword kw">end</span>
+        <span class="ruby-keyword kw">end</span>
+        <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>
