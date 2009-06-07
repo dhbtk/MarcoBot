@@ -1,0 +1,15 @@
+Marco is my little bot. He can do lots of wonderful stuff, but some of his
+features are broken, notably the FaiDwiki. I could use thine help.
+
+Install instructions:
+1. Create a folder for macros and karma storage. For example, "/home/your
+username/.marcobot"
+2. Create the folder /var/log/marcobot/ and /var/log/marcobot/logs/. He
+must have rw rights to these folders.
+3. Fill in the sample marcobotrc and put it in a folder, preferably the
+same one that you use for macros and karma.
+4. Run "init.sh" in the macros and karma folder.
+5. Call him with "marcobot /path/to/marcobotrc"
+6. Test him, improve him, report bugs
+7. ???
+8. Profit!
