@@ -602,24 +602,6 @@ class IRCBot
 					else
 						privmsg(target,"Echo what?")
 					end
-				when "linecount"
-					count = 0
-					self_file = File.open("#{@basepath}marcobot")
-					test = self_file.readlines
-					count += test.count
-					self_file = File.open("#{@basepath}karma.rb")
-					test = self_file.readlines
-					count += test.count
-					self_file = File.open("#{@basepath}wiki.rb")
-					test = self_file.readlines
-					count += test.count
-					self_file = File.open("#{@basepath}faidio.rb")
-					test = self_file.readlines
-					count += test.count
-					self_file = File.open("#{@basepath}macros.rb")
-					test = self_file.readlines
-					count += test.count
-					privmsg(target,"#{count} lines by now.")
 				when "faidio"
 					faidio(target)
 				when "reloadmacros"
