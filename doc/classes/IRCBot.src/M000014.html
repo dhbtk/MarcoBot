@@ -10,10 +10,10 @@
   <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
 </head>
 <body class="standalone-code">
-  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 234</span>
+  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 259</span>
         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">startup_routine</span>()
                 
-                <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;MODE #{@nick} +TB&quot;</span>)
+                <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;MODE #{@configfile['nick']} +TB&quot;</span>)
                 <span class="ruby-keyword kw">for</span> <span class="ruby-identifier">channel</span> <span class="ruby-keyword kw">in</span> <span class="ruby-ivar">@channel</span>
                         <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;JOIN #{channel}&quot;</span>)
                 <span class="ruby-keyword kw">end</span>

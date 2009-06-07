@@ -12,19 +12,17 @@
 <body class="standalone-code">
   <pre><span class="ruby-comment cmt"># File marcobot.rb, line 24</span>
         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">server</span>,<span class="ruby-identifier">port</span>,<span class="ruby-identifier">nick</span>,<span class="ruby-identifier">autojoin_channels</span>,<span class="ruby-identifier">ns_password</span>,<span class="ruby-identifier">basepath</span>,<span class="ruby-identifier">configfile</span>)
-                <span class="ruby-ivar">@server</span> = <span class="ruby-identifier">server</span>
-                <span class="ruby-ivar">@port</span> = <span class="ruby-identifier">port</span>
-                <span class="ruby-ivar">@nick</span> = <span class="ruby-identifier">nick</span>
+                <span class="ruby-ivar">@server</span> = <span class="ruby-identifier">configfile</span>[<span class="ruby-value str">'server'</span>].<span class="ruby-identifier">strip</span>
+                <span class="ruby-ivar">@port</span> = <span class="ruby-identifier">configfile</span>[<span class="ruby-value str">'port'</span>]
+                <span class="ruby-ivar">@nick</span> = <span class="ruby-identifier">configfile</span>[<span class="ruby-value str">'nick'</span>].<span class="ruby-identifier">strip</span>
                 <span class="ruby-ivar">@channel</span> = <span class="ruby-identifier">autojoin_channels</span>.<span class="ruby-identifier">downcase</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;,&quot;</span>)
                 <span class="ruby-identifier">puts</span> <span class="ruby-ivar">@channel</span>
-                <span class="ruby-ivar">@ns_password</span> = <span class="ruby-identifier">ns_password</span>
-                <span class="ruby-ivar">@basepath</span> = <span class="ruby-value str">&quot;/home/marcobot/&quot;</span>
-                <span class="ruby-ivar">@command_identifier</span> = <span class="ruby-value str">&quot;~&quot;</span>
+                <span class="ruby-ivar">@ns_password</span> = <span class="ruby-identifier">configfile</span>[<span class="ruby-value str">'nickserv_password'</span>].<span class="ruby-identifier">strip</span>
+                <span class="ruby-ivar">@basepath</span> = <span class="ruby-identifier">configfile</span>[<span class="ruby-value str">'basepath'</span>].<span class="ruby-identifier">strip</span>
+                <span class="ruby-ivar">@command_identifier</span> = <span class="ruby-identifier">configfile</span>[<span class="ruby-value str">'commandidentifier'</span>].<span class="ruby-identifier">strip</span>
                 <span class="ruby-ivar">@leavearray</span> = <span class="ruby-constant">Hash</span>.<span class="ruby-identifier">new</span>
                 <span class="ruby-ivar">@logarray</span> = <span class="ruby-constant">Hash</span>.<span class="ruby-identifier">new</span>
                 <span class="ruby-ivar">@voterarray</span> = <span class="ruby-constant">Hash</span>.<span class="ruby-identifier">new</span>
-                <span class="ruby-ivar">@macros_enabled</span> = <span class="ruby-keyword kw">true</span>
-                <span class="ruby-ivar">@macrofile</span> = <span class="ruby-keyword kw">nil</span>
                 <span class="ruby-ivar">@timeout</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">new</span>
                 <span class="ruby-ivar">@macrotime</span> = <span class="ruby-constant">Hash</span>.<span class="ruby-identifier">new</span>
                 <span class="ruby-ivar">@macrofile</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-node">&quot;#{@basepath}macros&quot;</span>,<span class="ruby-value str">&quot;r&quot;</span>)
@@ -33,8 +31,10 @@
                 <span class="ruby-ivar">@macros</span> = <span class="ruby-ivar">@macrofile</span>.<span class="ruby-identifier">readlines</span>
                 <span class="ruby-ivar">@configfile</span> = <span class="ruby-identifier">configfile</span>
                 <span class="ruby-ivar">@message_queue</span> = []
+                <span class="ruby-ivar">@users</span> = {} <span class="ruby-comment cmt"># Userlist</span>
 <span class="ruby-comment cmt">#               @blocking = false</span>
-                
+                <span class="ruby-ivar">@chanmodes</span> = {}
+                <span class="ruby-identifier">karma_init</span>()
         <span class="ruby-keyword kw">end</span></pre>
 </body>
 </html>

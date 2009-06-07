@@ -72,7 +72,7 @@ module Macros
 				@macrofile.delete trigger.downcase
 				privmsg(channel,"Macro removed.")
 			else
-				@macrofile[trigger.downcase] = macro
+				@macrofile[trigger.downcase.strip] = macro.strip
 				privmsg(channel,"Macro added.")
 			end
 		else

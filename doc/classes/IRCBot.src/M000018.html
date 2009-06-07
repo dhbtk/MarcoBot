@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
 </head>
 <body class="standalone-code">
-  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 261</span>
+  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 286</span>
         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">log</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">user</span>,<span class="ruby-identifier">message</span>,<span class="ruby-identifier">command</span>)
                 <span class="ruby-identifier">filepath</span> = <span class="ruby-node">&quot;/var/log/marcobot/logs/#{target.strip}-#{Time.new.day}-#{Time.new.month}-#{Time.new.year}&quot;</span>.<span class="ruby-identifier">downcase</span>
                 <span class="ruby-keyword kw">if</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exists?</span>(<span class="ruby-identifier">filepath</span>) <span class="ruby-keyword kw">then</span>
