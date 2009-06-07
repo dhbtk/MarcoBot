@@ -1,0 +1,23 @@
+--- 
+nomacrochans: "#nomacrochan" # Unused ATM.
+commandidentifier: "~" # Prefix to his commands
+macrotimeout: "300" # Timeout for macros, in seconds
+adminpassword: "password" # Deprecated, unused
+port: 6667 # IRC port
+nick: Marco # His nick
+karma_min: "-5" # Unused
+basepath: /home/yournick/.marcobot/ # Path to macro and karma storage, with a trailing slash
+server: irc.host.net # IRC server to connect to
+nickserv_password: "password" # Password used to identify with NickServ
+karmadebug: "no" # See karma.rb for details
+autoopchans: "#otherchan" # Unused
+macrosenabled: "true" # True is the default
+karma_slow: "yes" # Whether the file is saved whenever there is a change
+karmatimeout: "300" # Timeout for voting/revoting karma
+authnicks: YourNick!username # The nicks authorized to use admin commands, in "Nick!user" form
+admincommandidentifier: "!!" # Unused
+channels: "#Marco,#debugchan" # Autojoin channels
+canbecomeskynet: "no" # Unused
+blacklistnicks: Evildoer # Nicks not allowed to vote karma
+karma_max: "5" # Unused
+debugchan: "#Marco" # Exceptions will be delivered here

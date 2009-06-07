@@ -21,7 +21,8 @@ class IRCBot
 	include Karma
 	# initialize: get these nasty vars and make them globals.
 	#
-	def initialize(server,port,nick,autojoin_channels,ns_password,basepath,configfile)
+	def initialize(server,port,nick,autojoin_channels,ns_password,basepath,configfile,rcpath)
+		@rcpath = rcpath
 		@server = configfile['server'].strip
 		@port = configfile['port']
 		@nick = configfile['nick'].strip
@@ -218,8 +219,7 @@ class IRCBot
 			end
 		else
 			# Stuff in a PM.
-			check_for_command(message,user,user)
-			check_for_admin_command(message,user)
+			check_for_command(message,user,user,usermask)
 			if message.sub("ACTION ","") == message then
 				log(user,user,message,"privmsg")
 			else
@@ -604,19 +604,19 @@ class IRCBot
 					end
 				when "linecount"
 					count = 0
-					self_file = File.open("/home/eduardo/marcobot/marcobot")
+					self_file = File.open("#{@basepath}marcobot")
 					test = self_file.readlines
 					count += test.count
-					self_file = File.open("/home/eduardo/marcobot/karma.rb")
+					self_file = File.open("#{@basepath}karma.rb")
 					test = self_file.readlines
 					count += test.count
-					self_file = File.open("/home/eduardo/marcobot/wiki.rb")
+					self_file = File.open("#{@basepath}wiki.rb")
 					test = self_file.readlines
 					count += test.count
-					self_file = File.open("/home/eduardo/marcobot/faidio.rb")
+					self_file = File.open("#{@basepath}faidio.rb")
 					test = self_file.readlines
 					count += test.count
-					self_file = File.open("/home/eduardo/marcobot/macros.rb")
+					self_file = File.open("#{@basepath}macros.rb")
 					test = self_file.readlines
 					count += test.count
 					privmsg(target,"#{count} lines by now.")
@@ -633,7 +633,7 @@ class IRCBot
 					end
 				when "eval"
 					if is_auth_user?(usermask.split("@")[0]) then
-						eval(params.sub("#{@configfile['commandidentifier']}eval ",""))
+						eval(params)
 					else
 						privmsg(target,"I'm sorry Dave, I can't let you do that.")						
 					end
@@ -685,7 +685,7 @@ class IRCBot
 					end
 				when "saveconfig"
 					if is_auth_user?(usermask.split("@")[0]) then
-						File.open("/home/eduardo/.marcobot/marcobotrc","w") do |f|
+						File.open("#{@rcpath}/marcobotrc","w") do |f|
 							f << @configfile.to_yaml
 						end
 						privmsg(target,"Config file saved.")
@@ -776,55 +776,63 @@ class IRCBot
 	end
 end
 # Go! Go! Go!
-if ARGV[0] == "--dev" then
-irc = IRCBot.new("127.0.0.1",'6667','Marco','#FaiD','854600','/home/eduardo/marcobot/',{"adminpassword"=>"854600"})
-irc.connect()
-irc.main_loop()
+# ARGV[0] should be the path/to/marcobotrc - trailing slash
+if ARGV.empty? then
+	puts "Params: #{$0} /path/to/marcobotrc"
+	exit()
+end
+if File.directory?(ARGV[0]) then
+	path = ARGV[0]
+	configfile = YAML::load(File.open("#{path}/marcobotrc"))
+	puts configfile.class
+	irc = IRCBot.new(configfile["server"],configfile['port'],configfile['nickname'],configfile	['channels'],configfile['nickserv_password'],configfile['basepath'],configfile,path)
+	begin
+		irc.connect()
+	rescue Exception => detail
+		puts "Fail'd to connect :("
+		puts detail.message()
+		puts detail.backtrace().join("\n")
+		puts "Waiting..."
+		puts "5..."
+		sleep 1
+		puts "4..."
+		sleep 1
+		puts "3..."
+		sleep 1
+		puts "2..."
+		sleep 1
+		puts "1..."
+		sleep 1
+		retry
+	end
+	begin
+		irc.main_loop()
+	rescue Interrupt
+		irc.send_message(configfile['debugchannel'],"Going down!")
+	rescue Exception => detail
+		puts detail.message()
+		puts "Backtrace:"
+		for i in detail.backtrace()
+			puts i 
+		end
+		irc.privmsg(configfile['debugchannel'],"Oh dear, an exception: #{detail.message()}",0)
+		sleep 1
+		retry
+	ensure
+		puts "Saving logs..."
+		irc.logarray.each do |f|
+			puts f
+			f[1].close
+		end
+		irc.rawlogfile.close
+		File.open("#{path}/marcobotrc","w") do |f|
+			f << irc.configfile.to_yaml
+		end
+		File.open("#{configfile['basepath']}karma","w") do |f|
+			f << irc.karmafile.to_yaml
+		end
+		
+	end
 else
-configfile = YAML::load(File.open("/home/eduardo/.marcobot/marcobotrc"))
-irc = IRCBot.new(configfile["server"],configfile['port'],configfile['nickname'],configfile['channels'],configfile['nickserv_password'],configfile['basepath'],configfile)
-begin
-	irc.connect()
-rescue Exception => detail
-	puts "Fail'd to connect :("
-	puts detail.message()
-	puts detail.backtrace().join("\n")
-	puts "Waiting..."
-	puts "5..."
-	sleep 1
-	puts "4..."
-	sleep 1
-	puts "3..."
-	sleep 1
-	puts "2..."
-	sleep 1
-	puts "1..."
-	sleep 1
-	retry
-end
-begin
-	irc.main_loop()
-rescue Interrupt
-	irc.send_message("#faid3.0","Going down!")
-rescue Exception => detail
-	puts detail.message()
-	puts "Backtrace:"
-	for i in detail.backtrace()
-		puts i 
-	end
-	irc.privmsg("#faid3.0","Oh dear, an exception: #{detail.message()}",0)
-	sleep 1
-	retry
-ensure
-	puts "Saving logs..."
-	irc.logarray.each do |f|
-		puts f
-		f[1].close
-	end
-	irc.rawlogfile.close
-	File.open("/home/eduardo/.marcobot/marcobotrc","w") do |f|
-		f << irc.configfile.to_yaml
-	end
-	
-end
+	puts "Invalid path"
 end

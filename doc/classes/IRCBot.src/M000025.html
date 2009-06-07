@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>decide (IRCBot)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 747</span>
+        <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">decide</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">message</span>)
+                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message</span>[<span class="ruby-value">-1</span>].<span class="ruby-identifier">chr</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;?&quot;</span> <span class="ruby-keyword kw">then</span>
+                        <span class="ruby-identifier">message</span>[<span class="ruby-value">-1</span>] = <span class="ruby-value str">&quot;&quot;</span>
+                <span class="ruby-keyword kw">end</span>
+                <span class="ruby-identifier">stuff</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot; or &quot;</span>)
+                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">stuff</span>.<span class="ruby-identifier">count</span> <span class="ruby-operator">==</span> <span class="ruby-value">1</span> <span class="ruby-keyword kw">then</span>
+                        <span class="ruby-identifier">i</span> = <span class="ruby-identifier">rand</span>(<span class="ruby-value">8</span>)
+                        <span class="ruby-keyword kw">case</span> <span class="ruby-identifier">i</span> 
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">0</span>
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Of course.&quot;</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">1</span>
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Mmm, perhaps.&quot;</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">2</span>
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;You shouldn't.&quot;</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">3</span>
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Not really.&quot;</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">4</span>
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Don't or you will suffer.&quot;</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">5</span>
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;You can't know for sure.&quot;</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">6</span>
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;You totally should.&quot;</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">7</span>
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;YES! DO IT!&quot;</span>)
+                        <span class="ruby-keyword kw">end</span>
+                <span class="ruby-keyword kw">else</span>
+                        <span class="ruby-identifier">count</span> = <span class="ruby-identifier">rand</span>(<span class="ruby-identifier">stuff</span>.<span class="ruby-identifier">count</span> <span class="ruby-operator">+</span> <span class="ruby-value">1</span>)
+                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">stuff</span>[<span class="ruby-identifier">count</span><span class="ruby-operator">-</span><span class="ruby-value">1</span>])
+                <span class="ruby-keyword kw">end</span>
+        <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>
