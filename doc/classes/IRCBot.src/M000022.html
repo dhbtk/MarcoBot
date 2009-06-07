@@ -5,37 +5,294 @@
 
 <html>
 <head>
-  <title>dieroll (IRCBot)</title>
+  <title>check_for_command (IRCBot)</title>
   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
   <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
 </head>
 <body class="standalone-code">
-  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 613</span>
-        <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">dieroll</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">params</span>)
-                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">params</span> <span class="ruby-operator">!=</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span>
-                        <span class="ruby-identifier">params</span>.<span class="ruby-identifier">sub!</span>(<span class="ruby-value str">&quot;~dieroll &quot;</span>,<span class="ruby-value str">&quot;&quot;</span>)
-                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/^[0-9]+d[0-9]+$/</span> <span class="ruby-keyword kw">then</span>
-                                <span class="ruby-identifier">dice_number</span> = <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;d&quot;</span>)[<span class="ruby-value">0</span>].<span class="ruby-identifier">to_i</span>
-                                <span class="ruby-identifier">side_number</span> = <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;d&quot;</span>)[<span class="ruby-value">1</span>].<span class="ruby-identifier">sub</span>(<span class="ruby-value str">&quot;\n&quot;</span>,<span class="ruby-value str">&quot;&quot;</span>).<span class="ruby-identifier">to_i</span>
-                                <span class="ruby-comment cmt"># Throwing the dice</span>
-                                <span class="ruby-identifier">i</span> = <span class="ruby-value">0</span>
-                                <span class="ruby-identifier">sum</span> = <span class="ruby-value">0</span>
-                                <span class="ruby-identifier">resultarray</span> = []
-                                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">dice_number</span> <span class="ruby-operator">&lt;=</span> <span class="ruby-value">10</span> <span class="ruby-keyword kw">and</span> <span class="ruby-identifier">side_number</span> <span class="ruby-operator">&lt;=</span> <span class="ruby-value">20000</span> <span class="ruby-keyword kw">then</span>
-                                <span class="ruby-keyword kw">while</span> <span class="ruby-identifier">i</span> <span class="ruby-operator">&lt;</span> <span class="ruby-identifier">dice_number</span>
-                                        <span class="ruby-identifier">i</span> <span class="ruby-operator">+=</span> <span class="ruby-value">1</span>
-                                        <span class="ruby-identifier">result</span> = <span class="ruby-identifier">rand</span>(<span class="ruby-identifier">side_number</span><span class="ruby-operator">-</span><span class="ruby-value">1</span>) <span class="ruby-operator">+</span><span class="ruby-value">1</span>
-                                        <span class="ruby-identifier">sum</span> <span class="ruby-operator">+=</span> <span class="ruby-identifier">result</span>
-                                        <span class="ruby-identifier">resultarray</span>.<span class="ruby-identifier">push</span> <span class="ruby-identifier">result</span>
-                                <span class="ruby-keyword kw">end</span>
-                                <span class="ruby-keyword kw">end</span>
-                                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">sum</span> <span class="ruby-operator">==</span> <span class="ruby-value">0</span> <span class="ruby-keyword kw">or</span> <span class="ruby-identifier">side_number</span> <span class="ruby-operator">&lt;</span><span class="ruby-value">3</span> <span class="ruby-keyword kw">then</span>
-                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;You fail at making plausible dice.&quot;</span>)
-                                <span class="ruby-keyword kw">else</span>
-                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">resultarray</span>.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot;, &quot;</span>)<span class="ruby-operator">+</span><span class="ruby-value str">&quot;. Total: &quot;</span><span class="ruby-operator">+</span><span class="ruby-identifier">sum</span>.<span class="ruby-identifier">to_s</span>)
-                                <span class="ruby-keyword kw">end</span>
-                        <span class="ruby-keyword kw">else</span>
-                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Usage: (one)d(two), one is the number of dice, and two is the number of sides.&quot;</span>)    <span class="ruby-keyword kw">end</span>
+  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 393</span>
+        <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">check_for_command</span>(<span class="ruby-identifier">message</span>,<span class="ruby-identifier">target</span>,<span class="ruby-identifier">user</span>,<span class="ruby-identifier">usermask</span>)
+                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message</span>[<span class="ruby-value">0</span><span class="ruby-operator">..</span><span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'commandidentifier'</span>].<span class="ruby-identifier">length</span><span class="ruby-operator">-</span><span class="ruby-value">1</span>] <span class="ruby-operator">==</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'commandidentifier'</span>] <span class="ruby-keyword kw">then</span> <span class="ruby-comment cmt">#TODO: unhardcode this</span>
+                        <span class="ruby-identifier">message_split</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">split</span>
+                        <span class="ruby-identifier">command</span> = <span class="ruby-identifier">message_split</span>[<span class="ruby-value">0</span>] <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message_split</span>[<span class="ruby-value">1</span>] <span class="ruby-operator">!=</span> <span class="ruby-keyword kw">nil</span>
+                        <span class="ruby-identifier">command</span> = <span class="ruby-identifier">message</span> <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message_split</span>[<span class="ruby-value">1</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span>
+                        <span class="ruby-identifier">command</span> = <span class="ruby-identifier">command</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'commandidentifier'</span>],<span class="ruby-value str">&quot;&quot;</span>).<span class="ruby-identifier">strip</span>
+                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message_split</span>[<span class="ruby-value">1</span>] <span class="ruby-operator">!=</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span>
+                                <span class="ruby-identifier">message_split</span>[<span class="ruby-value">0</span>] = <span class="ruby-value str">&quot;&quot;</span>
+                                <span class="ruby-identifier">params</span> = <span class="ruby-identifier">message_split</span>.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot; &quot;</span>)
+                                <span class="ruby-identifier">params</span> = <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span>
+                        <span class="ruby-keyword kw">end</span>
+                        <span class="ruby-keyword kw">case</span> <span class="ruby-identifier">command</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;viewconfig&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">stuff</span> = <span class="ruby-identifier">params</span>
+                                                <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-identifier">stuff</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;\&quot;#{stuff}\&quot; is nil&quot;</span>)
+                                                <span class="ruby-keyword kw">elsif</span> <span class="ruby-operator">!</span><span class="ruby-identifier">stuff</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-value str">&quot;password&quot;</span>) <span class="ruby-keyword kw">or</span> <span class="ruby-operator">!</span><span class="ruby-identifier">stuff</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-value str">&quot;authnicks&quot;</span>) <span class="ruby-keyword kw">or</span> <span class="ruby-operator">!</span><span class="ruby-identifier">stuff</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-value str">&quot;basepath&quot;</span>) <span class="ruby-keyword kw">then</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;\&quot;#{stuff}\&quot; is \&quot;#{@configfile[stuff]}\&quot;&quot;</span>)
+                                                <span class="ruby-keyword kw">else</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">user</span>,<span class="ruby-node">&quot;\&quot;#{stuff}\&quot; is \&quot;#{@configfile[stuff]}\&quot;&quot;</span>)
+                                                <span class="ruby-keyword kw">end</span>
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;karmareload&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">karma_save</span>
+                                                <span class="ruby-identifier">karma_init</span>
+                                        <span class="ruby-keyword kw">end</span>                                        
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;part&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;PART #{params.strip}&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;do&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">send</span>(<span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;join&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;JOIN #{params.strip}&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;help&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">params</span> <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~dieroll, ~faidio, ~faidwiki, ~stfu, ~karma, decision making. Run \&quot;#{@configfile['commandidentifier']}help ~command\&quot; to get a more specific help.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~help&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Usage: ~help ~command.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~coinflip&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Flips a coin [citation needed] and shows the outcome. Can also be used as \&quot;ACTION flips a coin\&quot;&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~8ball&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Ask a question to the mighty 8-ball. \&quot;Should I?\&quot; questions are preferred.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~leave&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Adds a vote for me to leave. Six votes = leave channel.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~live&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Unvotes.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~thetime&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Prints the local time.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~shutup&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Toggles macros.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~macro&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Sets macros. They must have more than five characters. Setting them to a space removes them. Usage: ~macro input phrase=output phrase&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~wiki&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Usage: ~wiki Article. Case-sensitive. Buggy as hell, use at your own risk.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~dieroll&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Usage: \&quot;~dieroll (one)d(two)\&quot; or \&quot; ACTION rolls (one)d(two)\&quot;. One must be smaller than 11, and two must be smaller than 20,000.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~faidio&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Shows the FaiDio streams.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~stfu&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Clears the message queue. Useful for spam-y situations.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~faidwiki&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Looks up an article on the FaiDwiki.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;~karma&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Karma's a bitch.&quot;</span>)
+                                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;decision making&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Ask me, with my username first, about something or other.&quot;</span>)
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;NOTICE #{user} :No such command. Contradictions are lies.&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+??
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;coinflip&quot;</span>
+                                        <span class="ruby-identifier">coinflip</span>(<span class="ruby-identifier">target</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;8ball&quot;</span>
+                                        <span class="ruby-identifier">i</span> = <span class="ruby-identifier">rand</span>(<span class="ruby-value">8</span>)
+                                        <span class="ruby-keyword kw">case</span> <span class="ruby-identifier">i</span> 
+                                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">0</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Of course.&quot;</span>)
+                                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">1</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Mmm, perhaps.&quot;</span>)
+                                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">2</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;You shouldn't.&quot;</span>)
+                                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">3</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Not really.&quot;</span>)
+                                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">4</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Don't or you will suffer.&quot;</span>)
+                                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">5</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;You can't know for sure.&quot;</span>)
+                                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">6</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;You totally should.&quot;</span>)
+                                                <span class="ruby-keyword kw">when</span> <span class="ruby-value">7</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;YES! DO IT!&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;leave&quot;</span>
+                                        <span class="ruby-identifier">user</span> = <span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;!&quot;</span>)[<span class="ruby-value">1</span>]
+                                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">target</span>[<span class="ruby-value">0</span><span class="ruby-operator">..</span><span class="ruby-value">0</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;#&quot;</span> <span class="ruby-keyword kw">then</span>
+                                           <span class="ruby-ivar">@leavearray</span>[<span class="ruby-identifier">target</span>] = <span class="ruby-value">0</span> <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@leavearray</span>[<span class="ruby-identifier">target</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span>
+                                           <span class="ruby-ivar">@voterarray</span>[<span class="ruby-identifier">target</span>] = [] <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@voterarray</span>[<span class="ruby-identifier">target</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span>
+                                           <span class="ruby-identifier">unvalidvoter</span> = <span class="ruby-keyword kw">false</span>
+                                           <span class="ruby-keyword kw">for</span> <span class="ruby-identifier">voter</span> <span class="ruby-keyword kw">in</span> <span class="ruby-ivar">@voterarray</span>[<span class="ruby-identifier">target</span>]
+                                                   <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">user</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">voter</span> <span class="ruby-keyword kw">then</span>
+                                                           <span class="ruby-identifier">unvalidvoter</span> = <span class="ruby-keyword kw">true</span>
+                                                   <span class="ruby-keyword kw">end</span>
+                                           <span class="ruby-keyword kw">end</span>
+                                           <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">unvalidvoter</span> <span class="ruby-operator">==</span> <span class="ruby-keyword kw">false</span> <span class="ruby-keyword kw">then</span>
+                                                   <span class="ruby-ivar">@leavearray</span>[<span class="ruby-identifier">target</span>] = <span class="ruby-ivar">@leavearray</span>[<span class="ruby-identifier">target</span>] <span class="ruby-operator">+</span> <span class="ruby-value">1</span>
+                                                   <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@leavearray</span>[<span class="ruby-identifier">target</span>] <span class="ruby-operator">&gt;=</span> <span class="ruby-value">6</span> <span class="ruby-keyword kw">then</span>
+                                                           <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Six votes! I'm out&quot;</span>)
+                                                           <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;PART #{target}&quot;</span>)
+                                                           <span class="ruby-ivar">@leavearray</span>[<span class="ruby-identifier">target</span>] = <span class="ruby-value">0</span>
+                                                           <span class="ruby-ivar">@voterarray</span>[<span class="ruby-identifier">target</span>] = []
+                                                   <span class="ruby-keyword kw">else</span>
+                                                           <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;There are now #{@leavearray[target]} out of 6 votes asking me to leave.&quot;</span>)
+                                                           <span class="ruby-ivar">@voterarray</span>[<span class="ruby-identifier">target</span>].<span class="ruby-identifier">push</span> <span class="ruby-identifier">user</span>
+                                                   <span class="ruby-keyword kw">end</span>
+                                           <span class="ruby-keyword kw">else</span>
+                                                   <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;You have already voted.&quot;</span>)
+                                           <span class="ruby-keyword kw">end</span>
+                                         <span class="ruby-keyword kw">else</span>
+                                           <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;What the cruds are you trying to do?&quot;</span>)
+                                         <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;live&quot;</span>
+                                        <span class="ruby-identifier">user</span> = <span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;!&quot;</span>)[<span class="ruby-value">1</span>]
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">target</span>[<span class="ruby-value">0</span><span class="ruby-operator">..</span><span class="ruby-value">0</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;#&quot;</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-ivar">@leavearray</span>[<span class="ruby-identifier">target</span>] = <span class="ruby-value">0</span> <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@leavearray</span>[<span class="ruby-identifier">target</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span>
+                                                <span class="ruby-ivar">@voterarray</span>[<span class="ruby-identifier">target</span>] = [] <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@voterarray</span> <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span>
+                                                <span class="ruby-identifier">validvoter</span> = <span class="ruby-keyword kw">false</span>
+                                                <span class="ruby-keyword kw">for</span> <span class="ruby-identifier">voter</span> <span class="ruby-keyword kw">in</span> <span class="ruby-ivar">@voterarray</span>[<span class="ruby-identifier">target</span>]
+                                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">voter</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">user</span> <span class="ruby-keyword kw">then</span>
+                                                                <span class="ruby-identifier">validvoter</span> = <span class="ruby-keyword kw">true</span>
+                                                        <span class="ruby-keyword kw">end</span>
+                                                <span class="ruby-keyword kw">end</span>
+                                                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">validvoter</span> <span class="ruby-keyword kw">then</span>
+                                                        <span class="ruby-ivar">@leavearray</span>[<span class="ruby-identifier">target</span>] <span class="ruby-operator">-=</span> <span class="ruby-value">1</span>
+                                                        <span class="ruby-ivar">@voterarray</span>[<span class="ruby-identifier">target</span>].<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">user</span>)
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;Vote removed. #{@leavearray[target]} votes remaining.&quot;</span>)
+                                                <span class="ruby-keyword kw">else</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;You haven't voted!&quot;</span>)
+                                                <span class="ruby-keyword kw">end</span>
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;What the cruds are you trying to do?&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;die&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">disconnect</span>()
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Sorry Dave, I can't let you do that.&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;thetime&quot;</span>
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;The correct, Brazilian, time is: #{Time.now}&quot;</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;macro&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">params</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/(.+?)=(.+?)/</span> <span class="ruby-keyword kw">or</span> <span class="ruby-identifier">params</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/(.+?)=$/</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">add_macro</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">params</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;=&quot;</span>)[<span class="ruby-value">0</span>],<span class="ruby-identifier">params</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-identifier">params</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;=&quot;</span>)[<span class="ruby-value">0</span>]<span class="ruby-operator">+</span><span class="ruby-value str">&quot;=&quot;</span>,<span class="ruby-value str">&quot;&quot;</span>))
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Incorrect usage. RTFM.&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;macrocheck&quot;</span>
+                                        <span class="ruby-identifier">macrocheck</span>(<span class="ruby-identifier">params</span>,<span class="ruby-identifier">target</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;shutup&quot;</span>
+                                        <span class="ruby-keyword kw">case</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'macrosenabled'</span>]
+                                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">'true'</span>
+                                                        <span class="ruby-ivar">@macros_enabled</span> = <span class="ruby-value str">'false'</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Macros were disabled.&quot;</span>)
+                                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">'false'</span>
+                                                        <span class="ruby-ivar">@macros_enabled</span> = <span class="ruby-value str">'true'</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Macros were re-enabled.&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;wiki&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">params</span> <span class="ruby-operator">!=</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Wikiing, hold on...&quot;</span>)
+                                                <span class="ruby-identifier">find_wiki</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">params</span>,<span class="ruby-identifier">user</span>)
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Getting a random, hold on...&quot;</span>)
+                                                <span class="ruby-identifier">find_wiki</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Special:Random&quot;</span>,<span class="ruby-identifier">user</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;faidwiki&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">params</span> <span class="ruby-operator">!=</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Looking up...&quot;</span>)
+                                                <span class="ruby-identifier">find_faidwiki</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">params</span>,<span class="ruby-identifier">user</span>)
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Getting a random, hold on...&quot;</span>)
+                                                <span class="ruby-identifier">find_faidwiki</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Special:Random&quot;</span>,<span class="ruby-identifier">user</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;dieroll&quot;</span>
+                                        <span class="ruby-identifier">dieroll</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">params</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;echo&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">params</span> <span class="ruby-operator">!=</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span> 
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">params</span>)
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Echo what?&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;linecount&quot;</span>
+                                        <span class="ruby-identifier">count</span> = <span class="ruby-value">0</span>
+                                        <span class="ruby-identifier">self_file</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-value str">&quot;/home/eduardo/marcobot/marcobot&quot;</span>)
+                                        <span class="ruby-identifier">test</span> = <span class="ruby-identifier">self_file</span>.<span class="ruby-identifier">readlines</span>
+                                        <span class="ruby-identifier">count</span> <span class="ruby-operator">+=</span> <span class="ruby-identifier">test</span>.<span class="ruby-identifier">count</span>
+                                        <span class="ruby-identifier">self_file</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-value str">&quot;/home/eduardo/marcobot/karma.rb&quot;</span>)
+                                        <span class="ruby-identifier">test</span> = <span class="ruby-identifier">self_file</span>.<span class="ruby-identifier">readlines</span>
+                                        <span class="ruby-identifier">count</span> <span class="ruby-operator">+=</span> <span class="ruby-identifier">test</span>.<span class="ruby-identifier">count</span>
+                                        <span class="ruby-identifier">self_file</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-value str">&quot;/home/eduardo/marcobot/wiki.rb&quot;</span>)
+                                        <span class="ruby-identifier">test</span> = <span class="ruby-identifier">self_file</span>.<span class="ruby-identifier">readlines</span>
+                                        <span class="ruby-identifier">count</span> <span class="ruby-operator">+=</span> <span class="ruby-identifier">test</span>.<span class="ruby-identifier">count</span>
+                                        <span class="ruby-identifier">self_file</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-value str">&quot;/home/eduardo/marcobot/faidio.rb&quot;</span>)
+                                        <span class="ruby-identifier">test</span> = <span class="ruby-identifier">self_file</span>.<span class="ruby-identifier">readlines</span>
+                                        <span class="ruby-identifier">count</span> <span class="ruby-operator">+=</span> <span class="ruby-identifier">test</span>.<span class="ruby-identifier">count</span>
+                                        <span class="ruby-identifier">self_file</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-value str">&quot;/home/eduardo/marcobot/macros.rb&quot;</span>)
+                                        <span class="ruby-identifier">test</span> = <span class="ruby-identifier">self_file</span>.<span class="ruby-identifier">readlines</span>
+                                        <span class="ruby-identifier">count</span> <span class="ruby-operator">+=</span> <span class="ruby-identifier">test</span>.<span class="ruby-identifier">count</span>
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;#{count} lines by now.&quot;</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;faidio&quot;</span>
+                                        <span class="ruby-identifier">faidio</span>(<span class="ruby-identifier">target</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;reloadmacros&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-ivar">@macrofile</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-node">&quot;#{@basepath}macros&quot;</span>,<span class="ruby-value str">&quot;r&quot;</span>)
+                                                <span class="ruby-ivar">@yamlmacros</span> = <span class="ruby-constant">YAML</span><span class="ruby-operator">::</span><span class="ruby-identifier">load</span>(<span class="ruby-ivar">@macrofile</span>)
+                                                <span class="ruby-ivar">@macrofile</span>.<span class="ruby-identifier">rewind</span>
+                                                <span class="ruby-ivar">@macros</span> = <span class="ruby-ivar">@macrofile</span>.<span class="ruby-identifier">readlines</span>
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;I'm sorry Dave, I can't let you do that.&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;eval&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">eval</span>(<span class="ruby-identifier">params</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-node">&quot;#{@configfile['commandidentifier']}eval &quot;</span>,<span class="ruby-value str">&quot;&quot;</span>))
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;I'm sorry Dave, I can't let you do that.&quot;</span>)                                                
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;stfu&quot;</span>
+                                        <span class="ruby-ivar">@message_queue</span>.<span class="ruby-identifier">clear</span>
+                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Outgoing message queue cleared.&quot;</span>,<span class="ruby-value">2</span>)
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;listconfig&quot;</span>
+??
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">configoptions</span> = []
+                                                <span class="ruby-ivar">@configfile</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span>
+                                                        <span class="ruby-identifier">configoptions</span>.<span class="ruby-identifier">push</span> <span class="ruby-identifier">f</span>[<span class="ruby-value">0</span>]
+                                                <span class="ruby-keyword kw">end</span>
+                                                <span class="ruby-identifier">configoptions</span>.<span class="ruby-identifier">sort!</span>
+                                                <span class="ruby-identifier">configoptions</span> = <span class="ruby-identifier">configoptions</span>.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot;, &quot;</span>)
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;My configurable options are: #{configoptions}&quot;</span>)
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;I don't know you. Go away.&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;config&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">params</span> = <span class="ruby-identifier">params</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'commandidentifier'</span>]<span class="ruby-operator">+</span><span class="ruby-value str">&quot;config&quot;</span>,<span class="ruby-value str">&quot;&quot;</span>).<span class="ruby-identifier">strip</span>
+                                                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">params</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/(.+?)=(.+?)/</span> <span class="ruby-keyword kw">then</span>
+                                                        <span class="ruby-identifier">config</span> = <span class="ruby-identifier">params</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;=&quot;</span>)[<span class="ruby-value">0</span>]
+                                                        <span class="ruby-identifier">config_params</span> = <span class="ruby-identifier">params</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-identifier">params</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;=&quot;</span>)[<span class="ruby-value">0</span>]<span class="ruby-operator">+</span><span class="ruby-value str">&quot;=&quot;</span>,<span class="ruby-value str">&quot;&quot;</span>)
+                                                        <span class="ruby-ivar">@configfile</span>[<span class="ruby-identifier">config</span>] = <span class="ruby-identifier">config_params</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;Config option \&quot;#{config}\&quot; has been set to \&quot;#{config_params}\&quot;.&quot;</span>)
+                                                <span class="ruby-keyword kw">else</span>
+                                                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Wrong&quot;</span>)
+                                                <span class="ruby-keyword kw">end</span>
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Can't do that man&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;saveconfig&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-value str">&quot;/home/eduardo/.marcobot/marcobotrc&quot;</span>,<span class="ruby-value str">&quot;w&quot;</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span>
+                                                        <span class="ruby-identifier">f</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-ivar">@configfile</span>.<span class="ruby-identifier">to_yaml</span>
+                                                <span class="ruby-keyword kw">end</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;Config file saved.&quot;</span>)
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">&quot;You can't do that man&quot;</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;karma&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">params</span> <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-value str">'Whose karma?'</span>)
+                                        <span class="ruby-keyword kw">else</span>
+                                                <span class="ruby-identifier">get_karma</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">params</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-node">&quot;#{@configfile['commandidentifier']}karma &quot;</span>,<span class="ruby-value str">&quot;&quot;</span>).<span class="ruby-identifier">strip</span>)
+                                        <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;userlist&quot;</span>
+                                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">is_auth_user?</span>(<span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;@&quot;</span>)[<span class="ruby-value">0</span>]) <span class="ruby-keyword kw">then</span>
+                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-ivar">@users</span>[<span class="ruby-identifier">target</span>.<span class="ruby-identifier">downcase</span>].<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot; &quot;</span>))
+                                        <span class="ruby-keyword kw">end</span>
+                        <span class="ruby-keyword kw">end</span>
                 <span class="ruby-keyword kw">end</span>
         <span class="ruby-keyword kw">end</span></pre>
 </body>

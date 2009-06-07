@@ -5,46 +5,14 @@
 
 <html>
 <head>
-  <title>check_for_admin_command (IRCBot)</title>
+  <title>autoop (IRCBot)</title>
   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
   <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
 </head>
 <body class="standalone-code">
-  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 329</span>
-        <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">check_for_admin_command</span>(<span class="ruby-identifier">message</span>,<span class="ruby-identifier">user</span>)
-                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'admincommandidentifier'</span>]) <span class="ruby-keyword kw">then</span>
-                        <span class="ruby-identifier">message_split</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">split</span> <span class="ruby-comment cmt"># By spaces, the default</span>
-                        <span class="ruby-identifier">command</span> = <span class="ruby-identifier">message_split</span>[<span class="ruby-value">2</span>].<span class="ruby-identifier">sub</span>(<span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'admincommandidentifier'</span>],<span class="ruby-value str">&quot;&quot;</span>)
-                        <span class="ruby-identifier">password</span> = <span class="ruby-identifier">message_split</span>[<span class="ruby-value">1</span>]
-                        <span class="ruby-comment cmt"># Params are slightly more complicated. We need to set message_split[0,1,2] to nil first, and then join the message via spaces, and then strip the first three spaces. IF there is a param.</span>
-                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message_split</span>[<span class="ruby-value">3</span>] <span class="ruby-operator">!=</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span>
-                                <span class="ruby-identifier">message_split</span>[<span class="ruby-value">0</span>] = <span class="ruby-keyword kw">nil</span>
-                                <span class="ruby-identifier">message_split</span>[<span class="ruby-value">1</span>] = <span class="ruby-keyword kw">nil</span>
-                                <span class="ruby-identifier">message_split</span>[<span class="ruby-value">2</span>] = <span class="ruby-keyword kw">nil</span>
-                                <span class="ruby-identifier">params</span> = <span class="ruby-identifier">message_split</span>.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot; &quot;</span>)
-                                <span class="ruby-identifier">params</span> = <span class="ruby-identifier">params</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-value str">&quot;   &quot;</span>,<span class="ruby-value str">&quot;&quot;</span>)
-                        <span class="ruby-keyword kw">end</span>
-                        <span class="ruby-comment cmt"># It is a command. Let's see...</span>
-                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">password</span> <span class="ruby-operator">==</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'adminpassword'</span>] <span class="ruby-keyword kw">then</span>
-                                <span class="ruby-keyword kw">case</span> <span class="ruby-identifier">command</span>
-                                        <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;die&quot;</span>
-                                                <span class="ruby-identifier">disconnect</span>()
-                                        <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;raw&quot;</span>
-                                                <span class="ruby-identifier">send</span>(<span class="ruby-identifier">params</span>)
-                                        <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;help&quot;</span>
-                                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">user</span>,<span class="ruby-value str">&quot;ADMIN commands: die, raw, help, join, part.&quot;</span>)
-                                        <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;join&quot;</span>
-                                                <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;JOIN #{params}&quot;</span>)
-                                        <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;part&quot;</span>
-                                                <span class="ruby-ivar">@leavearray</span>[<span class="ruby-identifier">params</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-value str">&quot; &quot;</span>,<span class="ruby-value str">&quot;&quot;</span>)] = <span class="ruby-value">0</span>
-                                                <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;PART #{params}&quot;</span>)
-                                        <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;nick&quot;</span>
-                                                <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;NICK #{params.strip}&quot;</span>)
-                                <span class="ruby-keyword kw">end</span>
-                        <span class="ruby-keyword kw">else</span>
-                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">user</span>,<span class="ruby-value str">&quot;Wrong password.&quot;</span>)
-                        <span class="ruby-keyword kw">end</span>
-                <span class="ruby-keyword kw">end</span>
+  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 348</span>
+        <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">autoop</span>(<span class="ruby-identifier">chan</span>,<span class="ruby-identifier">user</span>)
+                <span class="ruby-comment cmt">#TODO</span>
         <span class="ruby-keyword kw">end</span></pre>
 </body>
 </html>

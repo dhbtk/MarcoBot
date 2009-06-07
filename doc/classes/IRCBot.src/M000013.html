@@ -10,10 +10,10 @@
   <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
 </head>
 <body class="standalone-code">
-  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 224</span>
+  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 249</span>
         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">handle_kick</span>(<span class="ruby-identifier">kicker</span>,<span class="ruby-identifier">kicked</span>,<span class="ruby-identifier">channel</span>,<span class="ruby-identifier">cause</span>)
                 <span class="ruby-comment cmt">#TODO: Call for logging</span>
-                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">kicked</span> <span class="ruby-operator">==</span> <span class="ruby-ivar">@nick</span> <span class="ruby-keyword kw">then</span>
+                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">kicked</span> <span class="ruby-operator">==</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'nick'</span>] <span class="ruby-keyword kw">then</span>
                         <span class="ruby-identifier">send</span> <span class="ruby-node">&quot;JOIN #{channel}&quot;</span>
                         <span class="ruby-identifier">emote</span>(<span class="ruby-identifier">channel</span>,<span class="ruby-node">&quot;kicks #{kicker} in the face&quot;</span>)
                 <span class="ruby-keyword kw">end</span>

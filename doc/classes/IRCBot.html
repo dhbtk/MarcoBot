@@ -80,11 +80,8 @@
 
     <div id="description">
       <p>
-require &quot;rwikibot&quot; # MWHAHAHHAHA require &quot;hpricot&quot;
+The One True Class, contains all of the methods here
 </p>
-<pre>
- The One True Class, contains all of the methods here
-</pre>
 
     </div>
 
@@ -95,11 +92,13 @@ require &quot;rwikibot&quot; # MWHAHAHHAHA require &quot;hpricot&quot;
       <h3 class="section-bar">Methods</h3>
 
       <div class="name-list">
-      <a href="#M000020">check_for_admin_command</a>&nbsp;&nbsp;
-      <a href="#M000021">check_for_command</a>&nbsp;&nbsp;
-      <a href="#M000023">coinflip</a>&nbsp;&nbsp;
+      <a href="#M000020">autoop</a>&nbsp;&nbsp;
+      <a href="#M000021">check_for_admin_command</a>&nbsp;&nbsp;
+      <a href="#M000022">check_for_command</a>&nbsp;&nbsp;
+      <a href="#M000024">coinflip</a>&nbsp;&nbsp;
       <a href="#M000003">connect</a>&nbsp;&nbsp;
-      <a href="#M000022">dieroll</a>&nbsp;&nbsp;
+      <a href="#M000025">decide</a>&nbsp;&nbsp;
+      <a href="#M000023">dieroll</a>&nbsp;&nbsp;
       <a href="#M000004">disconnect</a>&nbsp;&nbsp;
       <a href="#M000017">emote</a>&nbsp;&nbsp;
       <a href="#M000011">handle_invite</a>&nbsp;&nbsp;
@@ -132,6 +131,7 @@ require &quot;rwikibot&quot; # MWHAHAHHAHA require &quot;hpricot&quot;
         <span class="include-name"><a href="Faidio.html">Faidio</a></span>
         <span class="include-name"><a href="Wiki.html">Wiki</a></span>
         <span class="include-name"><a href="Macros.html">Macros</a></span>
+        <span class="include-name"><a href="Karma.html">Karma</a></span>
       </div>
     </div>
 
@@ -148,6 +148,11 @@ require &quot;rwikibot&quot; # MWHAHAHHAHA require &quot;hpricot&quot;
         <table>
         <tr class="top-aligned-row context-row">
           <td class="context-item-name">configfile</td>
+          <td class="context-item-value">&nbsp;[RW]&nbsp;</td>
+          <td class="context-item-desc"></td>
+        </tr>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">karmafile</td>
           <td class="context-item-value">&nbsp;[RW]&nbsp;</td>
           <td class="context-item-desc"></td>
         </tr>
@@ -196,6 +201,20 @@ initialize: get these nasty vars and make them globals.
         <div class="method-heading">
           <a href="IRCBot.src/M000020.html" target="Code" class="method-signature"
             onclick="popupCode('IRCBot.src/M000020.html');return false;">
+          <span class="method-name">autoop</span><span class="method-args">(chan,user)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+        </div>
+      </div>
+
+      <div id="method-M000021" class="method-detail">
+        <a name="M000021"></a>
+
+        <div class="method-heading">
+          <a href="IRCBot.src/M000021.html" target="Code" class="method-signature"
+            onclick="popupCode('IRCBot.src/M000021.html');return false;">
           <span class="method-name">check_for_admin_command</span><span class="method-args">(message,user)</span>
           </a>
         </div>
@@ -207,17 +226,17 @@ initialize: get these nasty vars and make them globals.
 |&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;|
 </p>
 <pre>
- Checks for ADMIN commands in messages. Format: !! password !!command params
+ Checks for ADMIN commands in messages. Format: !! password !!command params DEPRECATED
 </pre>
         </div>
       </div>
 
-      <div id="method-M000021" class="method-detail">
-        <a name="M000021"></a>
+      <div id="method-M000022" class="method-detail">
+        <a name="M000022"></a>
 
         <div class="method-heading">
-          <a href="IRCBot.src/M000021.html" target="Code" class="method-signature"
-            onclick="popupCode('IRCBot.src/M000021.html');return false;">
+          <a href="IRCBot.src/M000022.html" target="Code" class="method-signature"
+            onclick="popupCode('IRCBot.src/M000022.html');return false;">
           <span class="method-name">check_for_command</span><span class="method-args">(message,target,user,usermask)</span>
           </a>
         </div>
@@ -229,12 +248,12 @@ Checks for user-accessible commands.
         </div>
       </div>
 
-      <div id="method-M000023" class="method-detail">
-        <a name="M000023"></a>
+      <div id="method-M000024" class="method-detail">
+        <a name="M000024"></a>
 
         <div class="method-heading">
-          <a href="IRCBot.src/M000023.html" target="Code" class="method-signature"
-            onclick="popupCode('IRCBot.src/M000023.html');return false;">
+          <a href="IRCBot.src/M000024.html" target="Code" class="method-signature"
+            onclick="popupCode('IRCBot.src/M000024.html');return false;">
           <span class="method-name">coinflip</span><span class="method-args">(target)</span>
           </a>
         </div>
@@ -263,12 +282,29 @@ Connects to IRC
         </div>
       </div>
 
-      <div id="method-M000022" class="method-detail">
-        <a name="M000022"></a>
+      <div id="method-M000025" class="method-detail">
+        <a name="M000025"></a>
 
         <div class="method-heading">
-          <a href="IRCBot.src/M000022.html" target="Code" class="method-signature"
-            onclick="popupCode('IRCBot.src/M000022.html');return false;">
+          <a href="IRCBot.src/M000025.html" target="Code" class="method-signature"
+            onclick="popupCode('IRCBot.src/M000025.html');return false;">
+          <span class="method-name">decide</span><span class="method-args">(target,message)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Decides on stuff
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000023" class="method-detail">
+        <a name="M000023"></a>
+
+        <div class="method-heading">
+          <a href="IRCBot.src/M000023.html" target="Code" class="method-signature"
+            onclick="popupCode('IRCBot.src/M000023.html');return false;">
           <span class="method-name">dieroll</span><span class="method-args">(target,params)</span>
           </a>
         </div>

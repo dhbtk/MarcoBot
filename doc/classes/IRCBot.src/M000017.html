@@ -10,10 +10,10 @@
   <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
 </head>
 <body class="standalone-code">
-  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 255</span>
+  <pre><span class="ruby-comment cmt"># File marcobot.rb, line 280</span>
         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">emote</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">message</span>)
                 <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;ACTION #{message}&quot;</span>)
-                <span class="ruby-identifier">log</span>(<span class="ruby-identifier">target</span>,<span class="ruby-ivar">@nick</span>,<span class="ruby-node">&quot;ACTION #{message}&quot;</span>,<span class="ruby-value str">&quot;emote&quot;</span>)
+                <span class="ruby-identifier">log</span>(<span class="ruby-identifier">target</span>,<span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'nick'</span>],<span class="ruby-node">&quot;ACTION #{message}&quot;</span>,<span class="ruby-value str">&quot;emote&quot;</span>)
         <span class="ruby-keyword kw">end</span></pre>
 </body>
 </html>

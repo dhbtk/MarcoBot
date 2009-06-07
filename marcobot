@@ -11,30 +11,28 @@ require "rexml/document"
 require "faidio"
 require "wiki"
 require "macros"
-#require "rwikibot" # MWHAHAHHAHA
-#require "hpricot"
+require "karma"
 # The One True Class, contains all of the methods here
 class IRCBot
-	attr_accessor :rawlogfile, :logarray, :configfile
+	attr_accessor :rawlogfile, :logarray, :configfile, :karmafile
 	include Faidio
 	include Wiki
 	include Macros
+	include Karma
 	# initialize: get these nasty vars and make them globals.
 	#
 	def initialize(server,port,nick,autojoin_channels,ns_password,basepath,configfile)
-		@server = server
-		@port = port
-		@nick = nick
+		@server = configfile['server'].strip
+		@port = configfile['port']
+		@nick = configfile['nick'].strip
 		@channel = autojoin_channels.downcase.split(",")
 		puts @channel
-		@ns_password = ns_password
-		@basepath = "/home/marcobot/"
-		@command_identifier = "~"
+		@ns_password = configfile['nickserv_password'].strip
+		@basepath = configfile['basepath'].strip
+		@command_identifier = configfile['commandidentifier'].strip
 		@leavearray = Hash.new
 		@logarray = Hash.new
 		@voterarray = Hash.new
-		@macros_enabled = true
-		@macrofile = nil
 		@timeout = Time.new
 		@macrotime = Hash.new
 		@macrofile = File.open("#{@basepath}macros","r")
@@ -43,8 +41,10 @@ class IRCBot
 		@macros = @macrofile.readlines
 		@configfile = configfile
 		@message_queue = []
+		@users = {} # Userlist
 #		@blocking = false
-		
+		@chanmodes = {}
+		karma_init()
 	end
 	# sends stuff through the socket
 	#
@@ -89,11 +89,15 @@ class IRCBot
 			handle_topic(s_spaces[0],s_spaces[2],s_colons.join(":").sub(s_colons[1],"").sub("::",""))
 		elsif s_spaces[1] == "KICK" then
 			handle_kick(s_spaces[0],s_spaces[2],s_spaces[3],s_spaces[4])
+			send("NAMES #{s_spaces[2].sub(":","")}")
 		elsif s == ":#{@nick} MODE #{@nick} :+wx" then
 			startup_routine()
 		elsif s_spaces[1] == "MODE" then
 			if s_spaces[4] != nil then
 				log(s_spaces[2],s_spaces[0],"#{s_spaces[3]} #{s_spaces[4]}","usermode")
+				if s_spaces[4].strip == @configfile['nick'] then
+					@chanmodes[s_spaces[2].strip.downcase] = s_spaces[3].strip
+				end
 			else
 				log(s_spaces[2],s_spaces[0],s_spaces[3],"chanmode")
 			end
@@ -102,11 +106,15 @@ class IRCBot
 			if s_spaces[0].split("!")[0] == @nick then
 				@channel.delete(s_spaces[2].downcase)
 			end
+			send("NAMES #{s_spaces[2].sub(":","")}")
 		elsif s_spaces[1] == "JOIN" then
 			log(s_spaces[2].sub(":",""),s_spaces[0],"","join")
 			if s_spaces[0].split("!")[0] == @nick then
 				@channel.push(s_spaces[2].sub(":","").downcase)
 				privmsg(s_spaces[2].sub(":",""),"Hello #{s_spaces[2].sub(":","")} people!")
+				send("NAMES #{s_spaces[2].sub(":","")}")
+			else
+				autoop(s_spaces[2].sub(":",""),s_spaces[0].split("!")[0]) # Auto-op nicks
 			end
 		elsif s_spaces[1] == "QUIT" then
 			for channel in @channel
@@ -122,8 +130,21 @@ class IRCBot
 			end
 			
 		end
-		if s_spaces[0] = ":"+@server then
+		if s.start_with?(":#{@server}") then
 			log("Network",@server,s.strip,"network")
+			# Server message time! :naos.foonetic.net 353 NieXS @ #FaiD :
+			puts "Network message"
+			case s_spaces[1]
+				when "353" # NAMES list
+					puts "recieving NAMES list"
+					userlist = s_spaces
+					userlist = userlist.join(" ")
+					userlist = userlist.sub("#{s_spaces[0]} #{s_spaces[1]} #{s_spaces[2]} #{s_spaces[3]} #{s_spaces[4]} ","")
+					userlist.gsub!(/(\+|%|@|&|:)/,"")
+					userlist = userlist.downcase.split
+					@users[s_spaces[4].downcase] = userlist
+					puts userlist
+			end
 		end
 	end
 	# Looping and looping and looping again...
@@ -179,7 +200,8 @@ class IRCBot
 	def handle_message(user,target,message,usermask)
 		if target[0..0] == "#" then
 			# Stuff that is happening in a chan
-			check_for_macro(message,target,user) if @macros_enabled
+			check_for_karma(message.strip,usermask,target,user)
+			check_for_macro(message,target,user) if @configfile['macrosenabled'] == 'true'
 			check_for_command(message,target,user,usermask)
 			if message.sub("ACTION ","") == message then
 				log(target,user,message,"privmsg")
@@ -190,6 +212,9 @@ class IRCBot
 				elsif message.start_with?("ACTION flips a coin") then
 					coinflip(target)
 				end
+			end
+			if message.strip.start_with?("#{@configfile['nick']}: ") then
+				decide(target,message.strip.sub("#{@configfile['nick']}: ",""))
 			end
 		else
 			# Stuff in a PM.
@@ -223,7 +248,7 @@ class IRCBot
 	#
 	def handle_kick(kicker,kicked,channel,cause)
 		#TODO: Call for logging
-		if kicked == @nick then
+		if kicked == @configfile['nick'] then
 			send "JOIN #{channel}"
 			emote(channel,"kicks #{kicker} in the face")
 		end
@@ -233,7 +258,7 @@ class IRCBot
 	# 
 	def startup_routine()
 		
-		send("MODE #{@nick} +TB")
+		send("MODE #{@configfile['nick']} +TB")
 		for channel in @channel
 			send("JOIN #{channel}")
 		end
@@ -248,13 +273,13 @@ class IRCBot
 	#
 	def send_message(target,message)
 		send("PRIVMSG #{target} :#{message}")
-		log(target,@nick,message,"privmsg")
+		log(target,@configfile['nick'],message,"privmsg")
 	end		
 	# emote: Because everyone loves /me
 	#
 	def emote(target,message)
 		privmsg(target,"ACTION #{message}")
-		log(target,@nick,"ACTION #{message}","emote")
+		log(target,@configfile['nick'],"ACTION #{message}","emote")
 	end
 	# Logging, because my mind said so
 	#
@@ -320,12 +345,15 @@ class IRCBot
 			return false
 		end
 	end
+	def autoop(chan,user)
+		#TODO
+	end
 	#
 	#|------------------------------|
 	#|HUMUNGUOUS COMMANDS LAY BEYOND|
 	#|------------------------------|
 	#
-	# Checks for ADMIN commands in messages. Format: !! password !!command params
+	# Checks for ADMIN commands in messages. Format: !! password !!command params DEPRECATED
 	def check_for_admin_command(message,user)
 		if message.start_with?(@configfile['admincommandidentifier']) then
 			message_split = message.split # By spaces, the default
@@ -363,47 +391,78 @@ class IRCBot
 	end
 	# Checks for user-accessible commands.
 	def check_for_command(message,target,user,usermask)
-		if message[0..@command_identifier.length-1] == @command_identifier then #TODO: unhardcode this
+		if message[0..@configfile['commandidentifier'].length-1] == @configfile['commandidentifier'] then #TODO: unhardcode this
 			message_split = message.split
 			command = message_split[0] if message_split[1] != nil
 			command = message if message_split[1] == nil
-			command = command.sub(@command_identifier,"")	
-			command = command.sub(" ","")
+			command = command.sub(@configfile['commandidentifier'],"").strip
 			if message_split[1] != nil then
 				message_split[0] = ""
 				params = message_split.join(" ")
-#				params = params.sub(" ","")
+				params = params.strip
 			end
 			case command
+				when "viewconfig"
+					if is_auth_user?(usermask.split("@")[0]) then
+						stuff = params
+						if @configfile[stuff] == nil then
+							privmsg(target,"\"#{stuff}\" is nil")
+						elsif !stuff.include?("password") or !stuff.include?("authnicks") or !stuff.include?("basepath") then
+							privmsg(target,"\"#{stuff}\" is \"#{@configfile[stuff]}\"")
+						else
+							privmsg(user,"\"#{stuff}\" is \"#{@configfile[stuff]}\"")
+						end
+					end
+				when "karmareload"
+					if is_auth_user?(usermask.split("@")[0]) then
+						karma_save
+						karma_init
+					end					
+				when "part"
+					if is_auth_user?(usermask.split("@")[0]) then
+						send("PART #{params.strip}")
+					end
+				when "do"
+					if is_auth_user?(usermask.split("@")[0]) then
+						send(params.strip)
+					end
+				when "join"
+					if is_auth_user?(usermask.split("@")[0]) then
+						send("JOIN #{params.strip}")
+					end
 				when "help"
 					if params == nil then
-						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~dieroll, ~faidio, ~faidwiki, ~stfu. Run \"#{@command_identifier}help ~command\" to get a more specific help.")
-					elsif params.strip == @command_identifier+"help ~help" then
+						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~dieroll, ~faidio, ~faidwiki, ~stfu, ~karma, decision making. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
+					elsif params.strip == "~help" then
 						privmsg(target,"Usage: ~help ~command.")
-					elsif params.strip == @command_identifier+"help ~coinflip" then
+					elsif params.strip == "~coinflip" then
 						privmsg(target,"Flips a coin [citation needed] and shows the outcome. Can also be used as \"ACTION flips a coin\"")
-					elsif params.strip == @command_identifier+"help ~8ball" then
+					elsif params.strip == "~8ball" then
 						privmsg(target,"Ask a question to the mighty 8-ball. \"Should I?\" questions are preferred.")
-					elsif params.strip == @command_identifier+"help ~leave" then
+					elsif params.strip == "~leave" then
 						privmsg(target,"Adds a vote for me to leave. Six votes = leave channel.")
-					elsif params.strip == @command_identifier+"help ~live" then
+					elsif params.strip == "~live" then
 						privmsg(target,"Unvotes.")
-					elsif params.strip == @command_identifier+"help ~thetime" then
+					elsif params.strip == "~thetime" then
 						privmsg(target,"Prints the local time.")
-					elsif params.strip == @command_identifier+"help ~shutup" then
+					elsif params.strip == "~shutup" then
 						privmsg(target,"Toggles macros.")
-					elsif params.strip == @command_identifier+"help ~macro" then
+					elsif params.strip == "~macro" then
 						privmsg(target,"Sets macros. They must have more than five characters. Setting them to a space removes them. Usage: ~macro input phrase=output phrase")
-					elsif params.strip == @command_identifier+"help ~wiki" then
+					elsif params.strip == "~wiki" then
 						privmsg(target,"Usage: ~wiki Article. Case-sensitive. Buggy as hell, use at your own risk.")
-					elsif params.strip == @command_identifier+"help ~dieroll" then
+					elsif params.strip == "~dieroll" then
 						privmsg(target,"Usage: \"~dieroll (one)d(two)\" or \" ACTION rolls (one)d(two)\". One must be smaller than 11, and two must be smaller than 20,000.")
-					elsif params.strip == @command_identifier+"help ~faidio" then
+					elsif params.strip == "~faidio" then
 						privmsg(target,"Shows the FaiDio streams.")
-					elsif params.strip == @command_identifier+"help ~stfu" then
+					elsif params.strip == "~stfu" then
 						privmsg(target,"Clears the message queue. Useful for spam-y situations.")
-					elsif params.strip == @command_identifier+"help ~faidwiki" then
+					elsif params.strip == "~faidwiki" then
 						privmsg(target,"Looks up an article on the FaiDwiki.")
+					elsif params.strip == "~karma" then
+						privmsg(target,"Karma's a bitch.")
+					elsif params.strip == "decision making" then
+						privmsg(target,"Ask me, with my username first, about something or other.")
 					else
 						send("NOTICE #{user} :No such command. Contradictions are lies.")
 					end
@@ -446,6 +505,7 @@ class IRCBot
 							privmsg(target,"YES! DO IT!")
 					end
 				when "leave"
+					user = usermask.split("!")[1]
 					 if target[0..0] == "#" then
 					 	@leavearray[target] = 0 if @leavearray[target] == nil
 					 	@voterarray[target] = [] if @voterarray[target] == nil
@@ -473,6 +533,7 @@ class IRCBot
 					 	privmsg(target,"What the cruds are you trying to do?")
 					 end
 				when "live"
+					user = usermask.split("!")[1]
 					if target[0..0] == "#" then
 						@leavearray[target] = 0 if @leavearray[target] == nil
 						@voterarray[target] = [] if @voterarray == nil
@@ -509,17 +570,16 @@ class IRCBot
 				when "macrocheck"
 					macrocheck(params,target)
 				when "shutup"
-					case @macros_enabled
-						when true
-							@macros_enabled = false
+					case @configfile['macrosenabled']
+						when 'true'
+							@macros_enabled = 'false'
 							privmsg(target,"Macros were disabled.")
-						when false
-							@macros_enabled = true
+						when 'false'
+							@macros_enabled = 'true'
 							privmsg(target,"Macros were re-enabled.")
 					end
 				when "wiki"
 					if params != nil then
-						params = params.sub("~wiki ","")
 						privmsg(target,"Wikiing, hold on...")
 						find_wiki(target,params,user)
 					else
@@ -528,7 +588,6 @@ class IRCBot
 					end
 				when "faidwiki"
 					if params != nil then
-						params = params.sub("~faidwiki ","")
 						privmsg(target,"Looking up...")
 						find_faidwiki(target,params,user)
 					else
@@ -538,15 +597,29 @@ class IRCBot
 				when "dieroll"
 					dieroll(target,params)
 				when "echo"
-					if params != nil then params = params.sub("#{@command_identifier}echo ","").strip
+					if params != nil then 
 						privmsg(target,params)
 					else
 						privmsg(target,"Echo what?")
 					end
 				when "linecount"
+					count = 0
 					self_file = File.open("/home/eduardo/marcobot/marcobot")
 					test = self_file.readlines
-					privmsg(target,"#{test.count} lines by now.")
+					count += test.count
+					self_file = File.open("/home/eduardo/marcobot/karma.rb")
+					test = self_file.readlines
+					count += test.count
+					self_file = File.open("/home/eduardo/marcobot/wiki.rb")
+					test = self_file.readlines
+					count += test.count
+					self_file = File.open("/home/eduardo/marcobot/faidio.rb")
+					test = self_file.readlines
+					count += test.count
+					self_file = File.open("/home/eduardo/marcobot/macros.rb")
+					test = self_file.readlines
+					count += test.count
+					privmsg(target,"#{count} lines by now.")
 				when "faidio"
 					faidio(target)
 				when "reloadmacros"
@@ -560,7 +633,7 @@ class IRCBot
 					end
 				when "eval"
 					if is_auth_user?(usermask.split("@")[0]) then
-						eval(params.sub("#{@command_identifier}eval ",""))
+						eval(params.sub("#{@configfile['commandidentifier']}eval ",""))
 					else
 						privmsg(target,"I'm sorry Dave, I can't let you do that.")						
 					end
@@ -568,6 +641,7 @@ class IRCBot
 					@message_queue.clear
 					privmsg(target,"Outgoing message queue cleared.",2)
 				when "listconfig"
+=begin
 					if is_auth_user?(usermask.split("@")[0]) then
 						outgoing = ""
 						@configfile.each do |f|
@@ -583,9 +657,21 @@ class IRCBot
 						privmsg(target,"Sending a neutered list.")
 						privmsg(target,outgoing)
 					end
+=end
+					if is_auth_user?(usermask.split("@")[0]) then
+						configoptions = []
+						@configfile.each do |f|
+							configoptions.push f[0]
+						end
+						configoptions.sort!
+						configoptions = configoptions.join(", ")
+						privmsg(target,"My configurable options are: #{configoptions}")
+					else
+						privmsg(target,"I don't know you. Go away.")
+					end
 				when "config"
 					if is_auth_user?(usermask.split("@")[0]) then
-						params = params.sub(@command_identifier+"config","").strip
+						params = params.sub(@configfile['commandidentifier']+"config","").strip
 						if params =~ /(.+?)=(.+?)/ then
 							config = params.split("=")[0]
 							config_params = params.sub(params.split("=")[0]+"=","")
@@ -605,6 +691,16 @@ class IRCBot
 						privmsg(target,"Config file saved.")
 					else
 						privmsg(target,"You can't do that man")
+					end
+				when "karma"
+					if params == nil then
+						privmsg(target,'Whose karma?')
+					else
+						get_karma(target,params.sub("#{@configfile['commandidentifier']}karma ","").strip)
+					end
+				when "userlist"
+					if is_auth_user?(usermask.split("@")[0]) then
+						privmsg(target,@users[target.downcase].join(" "))
 					end
 			end
 		end
@@ -647,6 +743,37 @@ class IRCBot
 				privmsg(target,"Tails.")
 		end
 	end
+	# Decides on stuff
+	def decide(target,message)
+		if message[-1].chr == "?" then
+			message[-1] = ""
+		end
+		stuff = message.split(" or ")
+		if stuff.count == 1 then
+			i = rand(8)
+			case i 
+				when 0
+					privmsg(target,"Of course.")
+				when 1
+					privmsg(target,"Mmm, perhaps.")
+				when 2
+					privmsg(target,"You shouldn't.")
+				when 3
+					privmsg(target,"Not really.")
+				when 4
+					privmsg(target,"Don't or you will suffer.")
+				when 5
+					privmsg(target,"You can't know for sure.")
+				when 6
+					privmsg(target,"You totally should.")
+				when 7
+					privmsg(target,"YES! DO IT!")
+			end
+		else
+			count = rand(stuff.count + 1)
+			privmsg(target,stuff[count-1])
+		end
+	end
 end
 # Go! Go! Go!
 if ARGV[0] == "--dev" then
@@ -678,7 +805,7 @@ end
 begin
 	irc.main_loop()
 rescue Interrupt
-	irc.privmsg("#faid3.0","Going down!",0)
+	irc.send_message("#faid3.0","Going down!")
 rescue Exception => detail
 	puts detail.message()
 	puts "Backtrace:"
