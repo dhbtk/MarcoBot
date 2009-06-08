@@ -57,7 +57,7 @@ module Wiki
 #				end
 #				privmsg(target,outgoing1)
 #				privmsg(target,outgoing2)
-				outgoing_array = outgoing.unpack("A400A400A400A400A400A400A400A400A400") # Not cool, not funny, not a good way to do things.
+				outgoing_array = outgoing.unpack("A400A400A400A400") # Not cool, not funny, not a good way to do things.
 				for item in outgoing_array
 					if item == "" then
 						outgoing_array.delete(item)
