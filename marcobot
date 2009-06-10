@@ -428,8 +428,8 @@ class IRCBot
 						if params.split(" - ").count != 2 then
 							privmsg(target,"Wrong params or something")
 						elsif params =~ /^"(.+?)"\s-\s(.+?)/ then
-							band = params.split(" - ")[0]
-							song = params.split(" - ")[1]							
+							band = params.split(" - ")[1]
+							song = params.split(" - ")[0]							
 							returning = get_lyrics(band,song)
 							if returning.class == NilClass then
 								privmsg(target,"Not found. Sorry.")
