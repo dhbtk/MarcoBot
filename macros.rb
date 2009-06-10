@@ -86,4 +86,16 @@ module Macros
 		@macrofile.rewind
 		@macros = @macrofile.readlines
 	end
+	def macro_trim()
+		for a in @yamlmacros
+			if a[1].strip == "" then
+				@yamlmacros.delete(a[0])
+			end
+		end
+	end
+	def macro_save()
+		File.open("#{@basepath}macros","w") do |f|
+			f << @yamlmacros.to_yaml
+		end
+	end
 end

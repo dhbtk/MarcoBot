@@ -15,9 +15,11 @@ module Karma
 	# Checks for (<3/$user++ or </3/$user-- in a message), and adds/subtracts
 	# from the target's karma if he hasn't voted in TIMEOUT seconds, and his/her
 	# username isn't in a blacklist.
-	def check_for_karma(message,user,channel,actualuser)
-		user = user.split("!")[1].downcase
-		if message.start_with?("<3 ") or message[-2..-1] == "++" then
+	def check_for_karma(message,user,channel)
+		usermask = user
+		user = usermask.split("!")[1].downcase
+		actualuser = usermask.split("!")[0].downcase
+		if message.start_with?("<3 ") or message.strip.end_with? == "++" then
 			puts "Adding karma"
 			if message.start_with?("<3 ") then
 				target = message.sub("<3 ","").strip.downcase
@@ -25,7 +27,16 @@ module Karma
 				target = message.strip[0..message.strip.size-3].downcase
 			end
 			coefficient = 1
-		elsif message.start_with?("</3 ") or message[-2..-1] == "--" then
+			if @configfile['debugmode'] == 'yes' then
+				puts "MESSAGE ENDS IN NEWLINE LOLOLOL" if message.end_with?("\n")
+				puts "Var/class/value"
+				puts "message/#{message.class}/#{message}"
+				puts "user/#{user.class}/#{user}"
+				puts "actualuser/#{actualuser.class}/#{actualuser}"
+				puts "target/#{target.class}/#{target}"
+				puts "coefficient/#{coefficient.class}/#{coefficient}"
+			end
+		elsif message.start_with?("</3 ") or message.strip.end_with? == "--" then
 			puts "subtracting karma"
 			if message.start_with?("</3 ") then
 				target = message.sub("</3 ","").strip.downcase
@@ -33,9 +44,19 @@ module Karma
 				target = message.strip[0..message.strip.size-3].downcase
 			end
 			coefficient = -1
+			if @configfile['debugmode'] == 'yes' then
+				puts "MESSAGE ENDS IN NEWLINE LOLOLOL" if message.end_with?("\n")
+				puts "Var/class/value"
+				puts "message/#{message.class}/#{message}"
+				puts "user/#{user.class}/#{user}"
+				puts "actualuser/#{actualuser.class}/#{actualuser}"
+				puts "target/#{target.class}/#{target}"
+				puts "coefficient/#{coefficient.class}/#{coefficient}"
+			end
 		end
 		# Magical stuff
-		if target != nil and actualuser.downcase != target and @users[channel.downcase].include?(target.downcase.strip) and !@configfile['blacklistnicks'].downcase.split(",").include?(actualuser.downcase) then
+		if target != nil and actualuser.downcase != target and @users[channel.downcase].include?(target.downcase.strip) and !@configfile['blacklistnicks'].downcase.split(",").include?(actualuser.downcase) and coefficient != 0 then
+
 			if @karmatimeouts["#{user}/#{target}"] == nil or (Time.new - @karmatimeouts[user+'/'+target]) >= @configfile['karmatimeout'].to_i() and coefficient == 1 then
 				puts "Truly adding karma"
 				if @karmafile[target] == nil then
@@ -46,7 +67,6 @@ module Karma
 					karma_save()
 				end
 				@karmatimeouts[user+'/'+target] = Time.new
-				puts "adding karma"
 				privmsg(channel,"Adding karma") if @configfile['karmadebug'] == 'yes'		
 			elsif @karmatimeouts["#{user}/#{target}"] == nil or (Time.new - @karmatimeouts	[user+'/'+target]) >= @configfile['karmatimeout'].to_i() and coefficient == -1 then
 				if @karmafile[target] == nil then
@@ -62,6 +82,7 @@ module Karma
 			else
 				privmsg(channel,"On cooldown.") if @configfile['karmadebug'] == 'yes'
 			end
+			coefficient = 0
 		end		
 	end
 	# Gets a target's karma.

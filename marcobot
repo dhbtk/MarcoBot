@@ -1,18 +1,20 @@
-#!/usr/bin/ruby1.9 -w
+#!/usr/bin/ruby1.8 -w
 # MarcoBot: THE REWRITE; Version 2.0
 # Firstly, the basics. Commands will come later. <-- are already coming (TWSS)
 # Already supports:
 # fucktons of things
-#require 'rubygems'
+require 'rubygems'
 require "socket"
 require "yaml"
 require "net/http"
 require "rexml/document"
+require "hpricot"
 require "faidio"
 require "wiki"
 require "macros"
 require "karma"
 require "calc"
+require "lyrics"
 # The One True Class, contains all of the methods here
 class IRCBot
 	attr_accessor :rawlogfile, :logarray, :configfile, :karmafile
@@ -21,6 +23,7 @@ class IRCBot
 	include Macros
 	include Karma
 	include Calc
+	include Lyrics
 	# initialize: get these nasty vars and make them globals.
 	#
 	def initialize(server,port,nick,autojoin_channels,ns_password,basepath,configfile,rcpath)
@@ -117,7 +120,7 @@ class IRCBot
 				privmsg(s_spaces[2].sub(":",""),"Hello #{s_spaces[2].sub(":","")} people!")
 				send("NAMES #{s_spaces[2].sub(":","")}")
 			else
-				autoop(s_spaces[2].sub(":",""),s_spaces[0].split("!")[0]) # Auto-op nicks
+				autoop(s_spaces[2].sub(":",""),s_spaces[0].split("!")[0]) if @channel.include?(s_spaces[2].sub(":","").downcase) # Auto-op nicks
 			end
 		elsif s_spaces[1] == "QUIT" then
 			for channel in @channel
@@ -203,7 +206,7 @@ class IRCBot
 	def handle_message(user,target,message,usermask)
 		if target[0..0] == "#" then
 			# Stuff that is happening in a chan
-			check_for_karma(message.strip,usermask,target,user)
+			check_for_karma(message.strip,usermask,target)
 			check_for_macro(message,target,user) if @configfile['macrosenabled'] == 'true' and !@configfile['nomacrochans'].downcase.split(",").include?(target.downcase)
 			check_for_command(message,target,user,usermask)
 			if message.sub("ACTION ","") == message then
@@ -265,8 +268,12 @@ class IRCBot
 	def startup_routine()
 		
 		send("MODE #{@configfile['nick']} +TB")
-		for channel in @channel
-			send("JOIN #{channel}")
+		if @configfile['debugmode'] != 'yes' then
+			for channel in @channel
+				send("JOIN #{channel}")
+			end
+		else
+			send("JOIN #{@configfile['debugchannel']}")
 		end
 		privmsg("NickServ","IDENTIFY #{@ns_password}")
 	end
@@ -290,6 +297,7 @@ class IRCBot
 	# Logging, because my mind said so
 	#
 	def log(target,user,message,command)
+		if target != nil then
 		filepath = "/var/log/marcobot/logs/#{target.strip}-#{Time.new.day}-#{Time.new.month}-#{Time.new.year}".downcase
 		if File.exists?(filepath) then
 			@logarray[filepath] = File.open(filepath,"a") if @logarray[filepath].class != File
@@ -340,7 +348,7 @@ class IRCBot
 		rescue Exception => detail
 			privmsg(target,"Oh dear, an exception: #{detail.message()}")
 		end
-		
+		end
 	end
 	# Checks for authentication
 	#
@@ -415,6 +423,44 @@ class IRCBot
 				params = params.strip
 			end
 			case command
+				when "lyrics"
+					if params != nil then
+						if params.split(" - ").count != 2 then
+							privmsg(target,"Wrong params or something")
+						elsif params =~ /^"(.+?)"\s-\s(.+?)/ then
+							band = params.split(" - ")[0]
+							song = params.split(" - ")[1]							
+							returning = get_lyrics(band,song)
+							if returning.class == NilClass then
+								privmsg(target,"Not found. Sorry.")
+							else
+								for i in returning
+									privmsg(target,i)
+								end
+							end
+						else
+							band = params.split(" - ")[0]
+							song = params.split(" - ")[1]
+							returning = get_lyrics(band,song)
+							if returning.class == NilClass then
+								privmsg(target,"Not found. Sorry.")
+							else
+								for i in returning
+									privmsg(target,i)
+								end
+							end
+						end
+					else
+						privmsg(target,"Usage: ~lyrics Band - Song")
+					end
+				when "macrosave"
+					if is_auth_user?(usermask.split("@")[0]) then
+						macro_save()
+					end
+				when "macrotrim"
+					if is_auth_user?(usermask.split("@")[0]) then	
+						macro_trim()
+					end
 				when "calc"
 					if @configfile['calcrestricted'] == 'true' then
 						if is_auth_user?(usermask.split("@")[0]) then
