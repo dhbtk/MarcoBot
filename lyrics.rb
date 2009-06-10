@@ -4,7 +4,7 @@ require 'hpricot'
 module Lyrics
 	def get_lyrics(band,song)
 		band=band.downcase.strip.gsub(" ","-")
-		song=song.downcase.strip.gsub(" ","-").gsub(/(\,|\!|\?|"|\.|')/,"")
+		song=song.downcase.strip.gsub(" ","-").gsub(/(\,|\!|\?|\"|\.|\')/,"")
 		puts band
 		puts song
 		Net::HTTP.start("vagalume.uol.com.br",80) do |http|
