@@ -1,0 +1,943 @@
+#!/usr/bin/ruby1.8 -w
+# MarcoBot: THE REWRITE; Version 2.0
+# Firstly, the basics. Commands will come later. <-- are already coming (TWSS)
+# Already supports:
+# fucktons of things
+require 'rubygems'
+require "socket"
+require "yaml"
+require "net/http"
+require "rexml/document"
+require "hpricot"
+require "faidio"
+require "wiki"
+require "macros"
+require "karma"
+require "calc"
+require "lyrics"
+# The One True Class, contains all of the methods here
+class IRCBot
+	attr_accessor :rawlogfile, :logarray, :configfile, :karmafile
+	include Faidio
+	include Wiki
+	include Macros
+	include Karma
+	include Calc
+	include Lyrics
+	# initialize: get these nasty vars and make them globals.
+	#
+	def initialize(server,port,nick,autojoin_channels,ns_password,basepath,configfile,rcpath)
+		@rcpath = rcpath
+		@server = configfile['server'].strip
+		@port = configfile['port']
+		@nick = configfile['nick'].strip
+		if configfile['debugmode'] == 'yes' then
+			@channel = [configfile['debugchannel'].downcase]
+		else
+			@channel = autojoin_channels.downcase.split(",")
+		end
+		puts @channel
+		@ns_password = configfile['nickserv_password'].strip
+		@basepath = configfile['basepath'].strip
+		@command_identifier = configfile['commandidentifier'].strip
+		@leavearray = Hash.new
+		@logarray = Hash.new
+		@voterarray = Hash.new
+		@timeout = Time.new
+		@macrotime = Hash.new
+		@macrofile = File.open("#{@basepath}macros","r")
+		@yamlmacros = YAML::load(@macrofile)
+		@macrofile.rewind
+		@macros = @macrofile.readlines
+		@configfile = configfile
+		@message_queue = []
+		@users = {} # Userlist
+		@rawusers = {}
+		@notrecievingnames = {}
+#		@blocking = false
+		@mychanmode = {}
+		karma_init()
+	end
+	# sends stuff through the socket
+	#
+	def send(message)
+#		puts "[#{Time.new.hour}:#{Time.new.min}:#{Time.new.sec}] --> #{message}"
+		@irc.send "#{message}\n",0
+		rawlog("--> #{message}")
+	end
+	# Connects to IRC
+	#
+	def connect()
+		puts "Connecting..."
+		@irc = TCPSocket.open(@server,@port)
+		puts "Connected!"
+		send("USER #{@configfile['username']} foo bar :#{@configfile['fullname']}")
+		send("NICK #{@configfile['nick']}")
+		@connected = true;
+	end
+	# Disconnects from IRC
+	#
+	def disconnect(message = "Farewell")
+		send("QUIT :#{message}")
+		@connected = false;
+	end
+	# Handles the input, passing it to the appropriate functions
+	#
+	def handle_server_input(s)
+		s = s.strip.chomp
+		s_spaces = s.sub(":","").split
+		s_colons = s.split(":")
+		message = s_colons.join(":").sub(s_colons[1],"").sub("::","")
+		if s_spaces[0] == "PING" then
+			send "PONG "+s_spaces[1].sub(":","")
+		elsif s_spaces[1] == "PRIVMSG" then
+			user = s_spaces[0].sub(":","").split("!")[0]
+			target = s_spaces[2]
+			message = s_colons.join(":").sub(s_colons[1],"").sub("::","")
+			handle_message(user,target,message,s_spaces[0].sub(":",""))
+		elsif s_spaces[1] == "INVITE" then
+			handle_invite(s_spaces[3])
+		elsif s_spaces[1] == "TOPIC" then
+			handle_topic(s_spaces[0],s_spaces[2],s_colons.join(":").sub(s_colons[1],"").sub("::",""))
+		elsif s_spaces[1] == "KICK" then
+			handle_kick(s_spaces[0],s_spaces[3],s_spaces[2].sub(":",""),s_spaces[4])
+			send("NAMES #{s_spaces[2].sub(":","")}")
+		elsif s == ":#{@nick} MODE #{@nick} :+wx" then
+			startup_routine()
+		elsif s_spaces[1] == "MODE" then
+			if s_spaces[4] != nil then
+				log(s_spaces[2],s_spaces[0],"#{s_spaces[3]} #{s_spaces[4]}","usermode")
+				if s_spaces[4].strip == @configfile['nick'] then
+#					@chanmodes[s_spaces[2].strip.downcase] = s_spaces[3].strip
+				end
+			else
+				log(s_spaces[2],s_spaces[0],s_spaces[3],"chanmode")
+			end
+		elsif s_spaces[1] == "PART" then
+			log(s_spaces[2],s_spaces[0],message,"part")
+			if s_spaces[0].split("!")[0] == @nick then
+				@channel.delete(s_spaces[2].downcase)
+			end
+			send("NAMES #{s_spaces[2].sub(":","")}")
+		elsif s_spaces[1] == "JOIN" then
+			log(s_spaces[2].sub(":",""),s_spaces[0],"","join")
+			if s_spaces[0].split("!")[0] == @nick then
+				@channel.push(s_spaces[2].sub(":","").downcase)
+				privmsg(s_spaces[2].sub(":",""),"Hello #{s_spaces[2].sub(":","")} people!")
+				send("NAMES #{s_spaces[2].sub(":","")}")
+			else
+				autoop(s_spaces[2].sub(":",""),s_spaces[0].split("!")[0]) if @channel.include?(s_spaces[2].sub(":","").downcase) # Auto-op nicks
+			end
+		elsif s_spaces[1] == "QUIT" then
+			for channel in @channel
+				log(channel,s_spaces[2],message,"quit")
+			end
+		elsif s_spaces[1] == "NICK" then
+			newnick = s_spaces[2].sub(":","").strip
+			if s_spaces[0].split("!")[0] == @nick then
+#				newnick = s_spaces[2].sub(":","").strip
+				@nick = newnick
+			end
+			for channel in @channel
+				log(channel,s_spaces[0],newnick,"nick")
+			end
+			
+		end
+		if s.start_with?(":#{@server}") then
+			log("Network",@server,s.strip,"network")
+			# Server message time! :naos.foonetic.net 353 NieXS @ #FaiD :
+			puts "Network message"
+			case s_spaces[1]
+				when "353" # NAMES list
+					puts "recieving NAMES list"
+					userlist = s_spaces
+					userlist = userlist.join(" ")
+					userlist = userlist.sub("#{s_spaces[0]} #{s_spaces[1]} #{s_spaces[2]} #{s_spaces[3]} #{s_spaces[4]} ","")
+					rawuserlist = userlist.downcase.sub(":","").split
+					userlist.gsub!(/(\+|%|@|&|:)/,"")
+					userlist = userlist.downcase.split
+					if @users[s_spaces[4].downcase].frozen? or @rawusers[s_spaces[4].downcase] == nil then
+						puts "Clearing list"
+						@users[s_spaces[4].downcase] = []
+						@rawusers[s_spaces[4].downcase] = []
+					end
+					puts "Appending list"
+					@users[s_spaces[4].downcase] = @users[s_spaces[4].downcase] + userlist
+					@rawusers[s_spaces[4].downcase] = @rawusers[s_spaces[4].downcase] + rawuserlist
+					
+					puts userlist
+				when "366" # EONAMES
+					puts "Locking #{s_spaces[3].downcase}'s userlist"
+					@users[s_spaces[3].downcase].freeze
+#					@notrecievingnames[s_spaces[3].downcase] == true # Wrongly named vars ftl
+			end
+		end
+	end
+	# Looping and looping and looping again...
+	#
+	def main_loop()
+		while @connected
+			ready = select([@irc],nil,nil,0.5)
+			if ready then
+				return if @irc.eof
+				s = @irc.gets
+				rawlog(s)
+				handle_server_input(s)
+			end
+			handle_queue()	
+		end
+	end
+	# Handles the message queue
+	#
+	def handle_queue()
+		if !@message_queue.empty? then
+			message = @message_queue[0]
+			@message_queue.delete message
+			case message[2]
+				when 0
+					puts "High-priority message"
+				when 1
+					sleep 0.3
+				else
+					sleep 1
+			end
+			send_message(message[0],message[1])
+		end
+	end
+	# Basic logging
+	#
+	def rawlog(s)
+#		puts "#{timestamp(Time.new)} #{s}" 
+		@rawlogfile = File.open("/var/log/marcobot/rawlog","a+") if @rawlogfile.class != File
+		@rawlogfile.puts("#{timestamp(Time.new)}> #{s}")
+		
+	end
+	# Cute timestamps
+	#
+	def timestamp(time) # Pretty timestamps!
+		hour = (time.hour<10 ? "0"+time.hour.to_s : time.hour)
+		minute = (time.min<10 ? "0"+time.min.to_s : time.min)
+		second = (time.sec<10 ? "0"+time.min.to_s : time.sec)
+		thetime = "[#{hour}:#{minute}:#{second}]"
+		return thetime
+	end
+	# Handles incoming PRIVMSGs
+	#
+	def handle_message(user,target,message,usermask)
+		if target[0..0] == "#" then
+			# Stuff that is happening in a chan
+			check_for_karma(message.strip,usermask,target)
+			check_for_macro(message,target,user) if @configfile['macrosenabled'] == 'true' and !@configfile['nomacrochans'].downcase.split(",").include?(target.downcase)
+			check_for_command(message,target,user,usermask)
+			if message.sub("ACTION ","") == message then
+				log(target,user,message,"privmsg")
+			else
+				log(target,user,message,"emote")
+				if message.start_with?("ACTION rolls ") then
+					dieroll(target,message.sub("ACTION rolls ","").sub("",""))
+				elsif message.start_with?("ACTION flips a coin") then
+					coinflip(target)
+				end
+			end
+			if message.strip.start_with?("#{@configfile['nick']}: ") then
+				decide(target,message.strip.sub("#{@configfile['nick']}: ",""))
+			elsif message.strip.start_with?("#{@configfile['nick']}, ")
+				decide(target,message.strip.sub("#{@configfile['nick']}, ",""))
+			end
+		else
+			# Stuff in a PM.
+			check_for_command(message,user,user,usermask)
+			if message.sub("ACTION ","") == message then
+				log(user,user,message,"privmsg")
+			else
+				log(user,user,message,"emote")
+			end
+		end
+	end
+	# Handles INVITEs
+	#
+	def handle_invite(channel)
+		#TODO: call for logs
+#		if invited == @nick then
+			send("JOIN #{channel}")
+			privmsg(channel,"Hello #{channel}!")
+#		end
+#		log(channel,user,invited,"invite")
+	end
+	# Handles topic changes
+	#
+	def handle_topic(user,channel,newtopic)
+		#TODO
+		log(channel,user,newtopic,"topic")
+
+	end
+	# Handles kicking
+	#
+	def handle_kick(kicker,kicked,channel,cause)
+		#TODO: Call for logging
+		if kicked == @configfile['nick'] then
+			send "JOIN #{channel}"
+			emote(channel,"kicks #{kicker.split("!")[0]} in the face")
+		else
+			send("NAMES #{channel}")
+		end
+		log(channel,kicker,"#{kicked}\n#{cause}","kick")
+	end
+	# What to do when you should do something which I forget now oh gods halp
+	# 
+	def startup_routine()
+		
+		send("MODE #{@configfile['nick']} +TB")
+		if @configfile['debugmode'] != 'yes' then
+			for channel in @channel
+				send("JOIN #{channel}")
+			end
+		else
+			send("JOIN #{@configfile['debugchannel']}")
+		end
+		privmsg("NickServ","IDENTIFY #{@ns_password}")
+	end
+	# Adds a message to the queue
+	#
+	def privmsg(target,message,priority = 1)
+		@message_queue.push([target,message,priority])
+	end
+	# Sends a message bypassing the queue. Should only be used by handle_queue()
+	#
+	def send_message(target,message)
+		send("PRIVMSG #{target} :#{message}")
+		log(target,@configfile['nick'],message,"privmsg")
+	end		
+	# emote: Because everyone loves /me
+	#
+	def emote(target,message)
+		privmsg(target,"ACTION #{message}")
+		log(target,@configfile['nick'],"ACTION #{message}","emote")
+	end
+	# Logging, because my mind said so
+	#
+	def log(target,user,message,command)
+		if target != nil then
+		filepath = "/var/log/marcobot/logs/#{target.strip}-#{Time.new.day}-#{Time.new.month}-#{Time.new.year}".downcase
+		if File.exists?(filepath) then
+			@logarray[filepath] = File.open(filepath,"a") if @logarray[filepath].class != File
+		else
+			@logarray[filepath] = File.new(filepath,"a")
+		end
+		begin
+		case command
+			when "privmsg"
+				time = Time.new
+				@logarray[filepath].puts "#{timestamp(Time.new)} <#{user}> #{message.gsub("\n","")}"
+			when "emote"
+				time = Time.new
+				message = message.sub("ACTION ","")
+				message = message.gsub("","")
+				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user} #{message.gsub("\n","")}"
+			when "invite"
+				time = Time.new
+				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user} has invited #{message} into #{target}."
+			when "topic"
+				time = Time.new
+				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user} has changed the topic to: #{message}"
+			when "part"
+				time = Time.new
+				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user.split("!")[0]} (#{user}) has left #{target} (#{message})"
+			when "join"
+				time = Time.new
+				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user.split("!")[0]} (#{user}) has joined #{target}"
+			when "chanmode"
+				time = Time.new
+				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user} has changed the channel mode: #{message}"
+			when "usermode"
+				time = Time.new
+				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user} has changed #{message.split(" ")[1]}'s mode: #{message.split(" ")[0]}"
+			when "quit"
+				time = Time.new
+				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user.split("!")[0] unless user.class == NilClass} (#{user}) has left IRC: #{message}"
+			when "kick"
+				time = Time.new
+				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user} has kicked #{message.split("\n")[0]} from #{target} (#{message.split("\n")[1]})"
+			when "network"
+				time = Time.new
+				@logarray[filepath].puts "#{timestamp(Time.new)} #{message}"
+			when "nick"
+				@logarray[filepath].puts "#{timestamp(Time.new)} ***#{user} is now known as #{message}."
+				
+		end
+		rescue Exception => detail
+			privmsg(target,"Oh dear, an exception: #{detail.message()}")
+		end
+		end
+	end
+	# Checks for authentication
+	#
+	def is_auth_user?(user)
+		if @configfile['authnicks'].downcase.split(",").member?(user.downcase) then
+			return true
+		else
+			return false
+		end
+	end
+	def autoop(chan,user)
+		case @configfile['aclautoop']
+			when 'no'
+				send("MODE #{chan} +o #{user}")
+			else
+				if @configfile['autoopaclnicks'].downcase.split(",").include?(user) then
+					send("MODE #{chan} +o #{user}")
+				end
+		end
+	end
+	#
+	#|------------------------------|
+	#|HUMUNGUOUS COMMANDS LAY BEYOND|
+	#|------------------------------|
+	#
+	# Checks for ADMIN commands in messages. Format: !! password !!command params DEPRECATED
+	def check_for_admin_command(message,user)
+		if message.start_with?(@configfile['admincommandidentifier']) then
+			message_split = message.split # By spaces, the default
+			command = message_split[2].sub(@configfile['admincommandidentifier'],"")
+			password = message_split[1]
+			# Params are slightly more complicated. We need to set message_split[0,1,2] to nil first, and then join the message via spaces, and then strip the first three spaces. IF there is a param.
+			if message_split[3] != nil then
+				message_split[0] = nil
+				message_split[1] = nil
+				message_split[2] = nil
+				params = message_split.join(" ")
+				params = params.sub("   ","")
+			end
+			# It is a command. Let's see...
+			if password == @configfile['adminpassword'] then
+				case command
+					when "die"
+						disconnect()
+					when "raw"
+						send(params)
+					when "help"
+						privmsg(user,"ADMIN commands: die, raw, help, join, part.")
+					when "join"
+						send("JOIN #{params}")
+					when "part"
+						@leavearray[params.gsub(" ","")] = 0
+						send("PART #{params}")
+					when "nick"
+						send("NICK #{params.strip}")
+				end
+			else
+				privmsg(user,"Wrong password.")
+			end
+		end
+	end
+	# Checks for user-accessible commands.
+	def check_for_command(message,target,user,usermask)
+		if message.start_with?(@configfile['commandidentifier']) then #TODO: unhardcode this
+			message_split = message.split
+			command = message_split[0] if message_split[1] != nil
+			command = message if message_split[1] == nil
+			command = command.sub(@configfile['commandidentifier'],"").strip
+			if message_split[1] != nil then
+				message_split[0] = ""
+				params = message_split.join(" ")
+				params = params.strip
+			end
+			case command
+				when "lyrics"
+					if params != nil then
+						if params.split(" - ").count != 2 then
+							privmsg(target,"Wrong params or something")
+						elsif params =~ /^"(.+?)"\s-\s(.+?)/ then
+							band = params.split(" - ")[1]
+							song = params.split(" - ")[0]							
+							returning = get_lyrics(band,song)
+							if returning.class == NilClass then
+								privmsg(target,"Not found. Sorry.")
+							else
+								for i in returning
+									privmsg(target,i)
+								end
+							end
+						else
+							band = params.split(" - ")[0]
+							song = params.split(" - ")[1]
+							returning = get_lyrics(band,song)
+							if returning.class == NilClass then
+								privmsg(target,"Not found. Sorry.")
+							else
+								for i in returning
+									privmsg(target,i)
+								end
+							end
+						end
+					else
+						privmsg(target,"Usage: ~lyrics Band - Song")
+					end
+				when "macrosave"
+					if is_auth_user?(usermask.split("@")[0]) then
+						macro_save()
+					end
+				when "macrotrim"
+					if is_auth_user?(usermask.split("@")[0]) then	
+						macro_trim()
+					end
+				when "calc"
+					if @configfile['calcrestricted'] == 'true' then
+						if is_auth_user?(usermask.split("@")[0]) then
+							privmsg(target,sanitize(params))
+						else
+							privmsg(target,"Calculator is restricted.")
+						end
+					else
+						privmsg(target,sanitize(params))
+					end
+				when "autoop"
+					if params == nil then
+						privmsg(target,"Usage: #{@configfile['commandidentifier']}autoop [add|remove|check] nick")
+					else
+						params_split = params.split
+						acl = @configfile['autoopaclnicks'].downcase.split(",")
+						case params_split[0]
+							when "add"
+								if acl.include?(params_split[1].downcase) then
+									privmsg(target,"User is already in the ACL")
+								else
+									acl.push params_split[1].downcase
+									privmsg(target,"User has been added to the ACL")
+								end
+							when "remove"
+								if acl.include?(params_split[1].downcase) then
+									acl.delete params_split[1].downcase
+									privmsg(target,"User removed from the ACL")
+								else
+									privmsg(target,"User isn't in the ACL")
+								end
+							when "check"
+								if acl.include?(params_split[1].downcase) then
+									privmsg(target,"User is in the ACL")
+								else
+									privmsg(target,"User isn't in the ACL")
+								end
+						end
+						acl = acl.join(",")
+						acl = acl.downcase
+						@configfile['autoopaclnicks'] = acl
+					end
+				when "viewconfig"
+					if is_auth_user?(usermask.split("@")[0]) then
+						stuff = params
+						if @configfile[stuff] == nil then
+							privmsg(target,"\"#{stuff}\" is nil")
+						elsif !stuff.include?("password") or !stuff.include?("authnicks") or !stuff.include?("basepath") then
+							privmsg(target,"\"#{stuff}\" is \"#{@configfile[stuff]}\"")
+						else
+							privmsg(user,"\"#{stuff}\" is \"#{@configfile[stuff]}\"")
+						end
+					end
+				when "karmareload"
+					if is_auth_user?(usermask.split("@")[0]) then
+						karma_save
+						karma_init
+					end					
+				when "part"
+					if is_auth_user?(usermask.split("@")[0]) then
+						send("PART #{params.strip}")
+					end
+				when "do"
+					if is_auth_user?(usermask.split("@")[0]) then
+						send(params.strip)
+					end
+				when "join"
+					if is_auth_user?(usermask.split("@")[0]) then
+						send("JOIN #{params.strip}")
+					end
+				when "help"
+					if params == nil then
+						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~lyrics, ~faidio, ~faidwiki, ~stfu, ~karma, decision making. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
+					elsif params == "~lyrics" then
+						privmsg(target,"Check the lyrics for a song. Use like 'Band - Song' or '\"Song\" - Artist' (fuck you MoD)")
+					elsif params.strip == "~help" then
+						privmsg(target,"Usage: ~help ~command.")
+					elsif params.strip == "~coinflip" then
+						privmsg(target,"Flips a coin [citation needed] and shows the outcome. Can also be used as \"ACTION flips a coin\"")
+					elsif params.strip == "~8ball" then
+						privmsg(target,"Ask a question to the mighty 8-ball. \"Should I?\" questions are preferred.")
+					elsif params.strip == "~leave" then
+						privmsg(target,"Adds a vote for me to leave. Six votes = leave channel.")
+					elsif params.strip == "~live" then
+						privmsg(target,"Unvotes.")
+					elsif params.strip == "~thetime" then
+						privmsg(target,"Prints the local time.")
+					elsif params.strip == "~shutup" then
+						privmsg(target,"Toggles macros.")
+					elsif params.strip == "~macro" then
+						privmsg(target,"Sets macros. They must have more than five characters. Setting them to a space removes them. Usage: ~macro input phrase=output phrase")
+					elsif params.strip == "~wiki" then
+						privmsg(target,"Usage: ~wiki Article. Case-sensitive. Buggy as hell, use at your own risk.")
+					elsif params.strip == "~dieroll" then
+						privmsg(target,"Usage: \"~dieroll (one)d(two)\" or \" ACTION rolls (one)d(two)\". One must be smaller than 11, and two must be smaller than 20,000.")
+					elsif params.strip == "~faidio" then
+						privmsg(target,"Shows the FaiDio streams.")
+					elsif params.strip == "~stfu" then
+						privmsg(target,"Clears the message queue. Useful for spam-y situations.")
+					elsif params.strip == "~faidwiki" then
+						privmsg(target,"Looks up an article on the FaiDwiki.")
+					elsif params.strip == "~karma" then
+						privmsg(target,"Karma's a bitch.")
+					elsif params.strip == "decision making" then
+						privmsg(target,"Ask me, with my username first, about something or other.")
+					else
+						send("NOTICE #{user} :No such command. Contradictions are lies.")
+					end
+=begin
+					privmsg(user,"Commands:")
+					privmsg(user,"~help     : Shows this help.")
+					privmsg(user,"~coinflip : Flips a coin [citation needed] and shows the outcome.")
+					privmsg(user,"~8ball    : Ask a question to the mighty 8-ball. \"Should I?\" questions are preferred.")
+					privmsg(user,"~leave    : Adds a vote for me to leave. Six votes = leave channel.")
+					privmsg(user,"~live     : Unvotes.")
+					privmsg(user,"~thetime  : Prints the Brazilian time.")
+					privmsg(user,"~shutup   : Toggles macros.")
+					privmsg(user,"~macro    : Sets macros. They must have more than five characters. Setting them to a space removes them. Usage: ~macro input phrase=output phrase")
+					privmsg(user,"~wiki     : Usage: ~wiki Article. Case-sensitive. Buggy as hell, use at your own risk.")
+					privmsg(user,"~dieroll  : Usage: ~dieroll (dice)d(sides). Both must be natural numbers, and larger than two for the sides.")
+					privmsg(user,"~echo     : echo echo cho cho o o")
+					privmsg(user,"~linecount: Number of lines in the source code.")
+					privmsg(user,"~faidio   : Shows FaiDio streams.")
+=end
+				when "coinflip"
+					coinflip(target)
+				when "8ball"
+					i = rand(8)
+					case i 
+						when 0
+							privmsg(target,"Of course.")
+						when 1
+							privmsg(target,"Mmm, perhaps.")
+						when 2
+							privmsg(target,"You shouldn't.")
+						when 3
+							privmsg(target,"Not really.")
+						when 4
+							privmsg(target,"Don't or you will suffer.")
+						when 5
+							privmsg(target,"You can't know for sure.")
+						when 6
+							privmsg(target,"You totally should.")
+						when 7
+							privmsg(target,"YES! DO IT!")
+					end
+				when "leave"
+					user = usermask.split("!")[1]
+					 if target[0..0] == "#" then
+					 	@leavearray[target] = 0 if @leavearray[target] == nil
+					 	@voterarray[target] = [] if @voterarray[target] == nil
+					 	unvalidvoter = false
+					 	for voter in @voterarray[target]
+					 		if user == voter then
+					 			unvalidvoter = true
+					 		end
+					 	end
+					 	if unvalidvoter == false then
+					 		@leavearray[target] = @leavearray[target] + 1
+					 		if @leavearray[target] >= 6 then
+					 			privmsg(target,"Six votes! I'm out")
+					 			send("PART #{target}")
+					 			@leavearray[target] = 0
+					 			@voterarray[target] = []
+					 		else
+					 			privmsg(target,"There are now #{@leavearray[target]} out of 6 votes asking me to leave.")
+					 			@voterarray[target].push user
+					 		end
+					 	else
+					 		privmsg(target,"You have already voted.")
+					 	end
+					 else
+					 	privmsg(target,"What the cruds are you trying to do?")
+					 end
+				when "live"
+					user = usermask.split("!")[1]
+					if target[0..0] == "#" then
+						@leavearray[target] = 0 if @leavearray[target] == nil
+						@voterarray[target] = [] if @voterarray == nil
+						validvoter = false
+						for voter in @voterarray[target]
+							if voter == user then
+								validvoter = true
+							end
+						end
+						if validvoter then
+							@leavearray[target] -= 1
+							@voterarray[target].delete(user)
+							privmsg(target,"Vote removed. #{@leavearray[target]} votes remaining.")
+						else
+							privmsg(target,"You haven't voted!")
+						end
+					else
+						privmsg(target,"What the cruds are you trying to do?")
+					end
+				when "die"
+					if is_auth_user?(usermask.split("@")[0]) then
+						disconnect(params)
+					else
+						privmsg(target,"Sorry Dave, I can't let you do that.")
+					end
+				when "thetime"
+					privmsg(target,"The correct, Brazilian, time is: #{Time.now}")
+				when "macro"
+					if params =~ /(.+?)=(.+?)/ or params =~ /(.+?)=$/ then
+						add_macro(target,params.split("=")[0],params.sub(params.split("=")[0]+"=",""))
+					else
+						privmsg(target,"Incorrect usage. RTFM.")
+					end
+				when "macrocheck"
+					macrocheck(params,target)
+				when "shutup"
+					case @configfile['macrosenabled']
+						when 'true'
+							@macros_enabled = 'false'
+							privmsg(target,"Macros were disabled.")
+						when 'false'
+							@macros_enabled = 'true'
+							privmsg(target,"Macros were re-enabled.")
+					end
+				when "wiki"
+					if params != nil then
+						privmsg(target,"Wikiing, hold on...")
+						find_wiki(target,params,user)
+					else
+						privmsg(target,"Getting a random, hold on...")
+						find_wiki(target,"Special:Random",user)
+					end
+				when "faidwiki"
+					if params != nil then
+						privmsg(target,"Looking up...")
+						find_faidwiki(target,params,user)
+					else
+						privmsg(target,"Getting a random, hold on...")
+						find_faidwiki(target,"Special:Random",user)
+					end
+				when "dieroll"
+					dieroll(target,params)
+				when "echo"
+					if params != nil then 
+						privmsg(target,params)
+					else
+						privmsg(target,"Echo what?")
+					end
+				when "faidio"
+					faidio(target)
+				when "reloadmacros"
+					if is_auth_user?(usermask.split("@")[0]) then
+						@macrofile = File.open("#{@basepath}macros","r")
+						@yamlmacros = YAML::load(@macrofile)
+						@macrofile.rewind
+						@macros = @macrofile.readlines
+					else
+						privmsg(target,"I'm sorry Dave, I can't let you do that.")
+					end
+				when "eval"
+					if is_auth_user?(usermask.split("@")[0]) then
+						eval(params)
+					else
+						privmsg(target,"I'm sorry Dave, I can't let you do that.")						
+					end
+				when "stfu"
+					@message_queue.clear
+					privmsg(target,"Outgoing message queue cleared.",2)
+				when "listconfig"
+=begin
+					if is_auth_user?(usermask.split("@")[0]) then
+						outgoing = ""
+						@configfile.each do |f|
+							outgoing = "#{outgoing}#{f[0]}: #{f[1]}; "
+						end
+						privmsg(user,outgoing,2)
+						privmsg(target,"Full list PM'd.")
+					else
+						outgoing = ""
+						@configfile.each do |f|
+							outgoing = "#{outgoing}#{f[0]}: #{f[1]}; " if f[0].include?("password") == false and f[0].include?("basepath") == false and f[0].include?("authnicks") == false
+						end
+						privmsg(target,"Sending a neutered list.")
+						privmsg(target,outgoing)
+					end
+=end
+					if is_auth_user?(usermask.split("@")[0]) then
+						configoptions = []
+						@configfile.each do |f|
+							configoptions.push f[0]
+						end
+						configoptions.sort!
+						configoptions = configoptions.join(", ")
+						privmsg(target,"My configurable options are: #{configoptions}")
+					else
+						privmsg(target,"I don't know you. Go away.")
+					end
+				when "config"
+					if is_auth_user?(usermask.split("@")[0]) then
+						params = params.sub(@configfile['commandidentifier']+"config","").strip
+						if params =~ /(.+?)=(.+?)/ then
+							config = params.split("=")[0]
+							config_params = params.sub(params.split("=")[0]+"=","")
+							@configfile[config] = config_params
+							privmsg(target,"Config option \"#{config}\" has been set to \"#{config_params}\".")
+						else
+							privmsg(target,"Wrong")
+						end
+					else
+						privmsg(target,"Can't do that man")
+					end
+				when "saveconfig"
+					if is_auth_user?(usermask.split("@")[0]) then
+						File.open("#{@rcpath}/marcobotrc","w") do |f|
+							f << @configfile.to_yaml
+						end
+						privmsg(target,"Config file saved.")
+					else
+						privmsg(target,"You can't do that man")
+					end
+				when "karma"
+					if params == nil then
+						privmsg(target,'Whose karma?')
+					else
+						get_karma(target,params.sub("#{@configfile['commandidentifier']}karma ","").strip)
+					end
+				when "userlist"
+					if is_auth_user?(usermask.split("@")[0]) then
+						privmsg(target,@users[target.downcase].join(" "))
+					end
+			end
+		end
+	end
+	# Throws dice or something
+	def dieroll(target,params)
+		if params != nil then
+			params.sub!("~dieroll ","")
+			if params.strip =~ /^[0-9]+d[0-9]+$/ then
+				dice_number = params.strip.split("d")[0].to_i
+				side_number = params.strip.split("d")[1].sub("\n","").to_i
+				# Throwing the dice
+				i = 0
+				sum = 0
+				resultarray = []
+				if dice_number <= 10 and side_number <= 20000 then
+				while i < dice_number
+					i += 1
+					result = rand(side_number-1) +1
+					sum += result
+					resultarray.push result
+				end
+				end
+				if sum == 0 or side_number <3 then
+					privmsg(target,"You fail at making plausible dice.")
+				else
+					privmsg(target,resultarray.join(", ")+". Total: "+sum.to_s)
+				end
+			else
+				privmsg(target,"Usage: (one)d(two), one is the number of dice, and two is the number of sides.")	end
+		end
+	end
+	# Flips a coin
+	def coinflip(target)
+		i = rand(2)
+		case i
+			when 0
+				privmsg(target,"Heads.")
+			when 1
+				privmsg(target,"Tails.")
+		end
+	end
+	# Decides on stuff
+	def decide(target,message)
+		if message[-1].chr == "?" then
+			message[-1] = ""
+		end
+		stuff = message.split(" or ")
+		if stuff.count == 1 then
+			i = rand(8)
+			case i 
+				when 0
+					privmsg(target,"Of course.")
+				when 1
+					privmsg(target,"Mmm, perhaps.")
+				when 2
+					privmsg(target,"You shouldn't.")
+				when 3
+					privmsg(target,"Not really.")
+				when 4
+					privmsg(target,"Don't or you will suffer.")
+				when 5
+					privmsg(target,"You can't know for sure.")
+				when 6
+					privmsg(target,"You totally should.")
+				when 7
+					privmsg(target,"YES! DO IT!")
+			end
+		else
+			count = rand(stuff.count + 1)
+			privmsg(target,stuff[count-1])
+		end
+	end
+end
+# Go! Go! Go!
+# ARGV[0] should be the path/to/marcobotrc - trailing slash
+if ARGV.empty? then
+	puts "Params: #{$0} /path/to/marcobotrc"
+	exit()
+end
+if File.directory?(ARGV[0]) then
+	path = ARGV[0]
+	configfile = YAML::load(File.open("#{path}/marcobotrc"))
+	puts configfile.class
+	irc = IRCBot.new(configfile["server"],configfile['port'],configfile['nickname'],configfile	['channels'],configfile['nickserv_password'],configfile['basepath'],configfile,path)
+	begin
+		irc.connect()
+	rescue Exception => detail
+		puts "Fail'd to connect :("
+		puts detail.message()
+		puts detail.backtrace().join("\n")
+		puts "Waiting..."
+		puts "5..."
+		sleep 1
+		puts "4..."
+		sleep 1
+		puts "3..."
+		sleep 1
+		puts "2..."
+		sleep 1
+		puts "1..."
+		sleep 1
+		retry
+	end
+	begin
+		irc.main_loop()
+	rescue Interrupt
+		irc.send_message(configfile['debugchannel'],"Going down!")
+	rescue Exception => detail
+		puts detail.message()
+		puts "Backtrace:"
+		for i in detail.backtrace()
+			puts i 
+		end
+		irc.privmsg(configfile['debugchannel'],"Oh dear, an exception: #{detail.message()}",0)
+		sleep 1
+		retry
+	ensure
+		puts "Saving logs..."
+		irc.logarray.each do |f|
+			puts f
+			f[1].close
+		end
+		irc.rawlogfile.close
+		File.open("#{path}/marcobotrc","w") do |f|
+			f << irc.configfile.to_yaml
+		end
+		File.open("#{configfile['basepath']}karma","w") do |f|
+			f << irc.karmafile.to_yaml
+		end
+		
+	end
+else
+	puts "Invalid path"
+end

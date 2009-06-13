@@ -9,6 +9,7 @@ require "yaml"
 require "net/http"
 require "rexml/document"
 require "hpricot"
+require "digest/sha1"
 require "faidio"
 require "wiki"
 require "macros"
@@ -31,7 +32,11 @@ class IRCBot
 		@server = configfile['server'].strip
 		@port = configfile['port']
 		@nick = configfile['nick'].strip
-		@channel = autojoin_channels.downcase.split(",")
+		if configfile['debugmode'] == 'yes' then
+			@channel = [configfile['debugchannel'].downcase]
+		else
+			@channel = autojoin_channels.downcase.split(",")
+		end
 		puts @channel
 		@ns_password = configfile['nickserv_password'].strip
 		@basepath = configfile['basepath'].strip
@@ -48,8 +53,10 @@ class IRCBot
 		@configfile = configfile
 		@message_queue = []
 		@users = {} # Userlist
+		@rawusers = {}
+		@notrecievingnames = {}
 #		@blocking = false
-		@chanmodes = {}
+		@mychanmode = {}
 		karma_init()
 	end
 	# sends stuff through the socket
@@ -65,14 +72,14 @@ class IRCBot
 		puts "Connecting..."
 		@irc = TCPSocket.open(@server,@port)
 		puts "Connected!"
-		send("USER MarcoBot foo bar :NieXS' MacroBot, Version 2.0")
-		send("NICK #{@nick}")
+		send("USER #{@configfile['username']} foo bar :#{@configfile['fullname']}")
+		send("NICK #{@configfile['nick']}")
 		@connected = true;
 	end
 	# Disconnects from IRC
 	#
-	def disconnect()
-		send("QUIT Farewell")
+	def disconnect(message = "Farewell")
+		send("QUIT :#{message}")
 		@connected = false;
 	end
 	# Handles the input, passing it to the appropriate functions
@@ -102,7 +109,7 @@ class IRCBot
 			if s_spaces[4] != nil then
 				log(s_spaces[2],s_spaces[0],"#{s_spaces[3]} #{s_spaces[4]}","usermode")
 				if s_spaces[4].strip == @configfile['nick'] then
-					@chanmodes[s_spaces[2].strip.downcase] = s_spaces[3].strip
+#					@chanmodes[s_spaces[2].strip.downcase] = s_spaces[3].strip
 				end
 			else
 				log(s_spaces[2],s_spaces[0],s_spaces[3],"chanmode")
@@ -127,8 +134,9 @@ class IRCBot
 				log(channel,s_spaces[2],message,"quit")
 			end
 		elsif s_spaces[1] == "NICK" then
+			newnick = s_spaces[2].sub(":","").strip
 			if s_spaces[0].split("!")[0] == @nick then
-				newnick = s_spaces[2].sub(":","").strip
+#				newnick = s_spaces[2].sub(":","").strip
 				@nick = newnick
 			end
 			for channel in @channel
@@ -146,10 +154,23 @@ class IRCBot
 					userlist = s_spaces
 					userlist = userlist.join(" ")
 					userlist = userlist.sub("#{s_spaces[0]} #{s_spaces[1]} #{s_spaces[2]} #{s_spaces[3]} #{s_spaces[4]} ","")
+					rawuserlist = userlist.downcase.sub(":","").split
 					userlist.gsub!(/(\+|%|@|&|:)/,"")
 					userlist = userlist.downcase.split
-					@users[s_spaces[4].downcase] = userlist
+					if @users[s_spaces[4].downcase].frozen? or @rawusers[s_spaces[4].downcase] == nil then
+						puts "Clearing list"
+						@users[s_spaces[4].downcase] = []
+						@rawusers[s_spaces[4].downcase] = []
+					end
+					puts "Appending list"
+					@users[s_spaces[4].downcase] = @users[s_spaces[4].downcase] + userlist
+					@rawusers[s_spaces[4].downcase] = @rawusers[s_spaces[4].downcase] + rawuserlist
+					
 					puts userlist
+				when "366" # EONAMES
+					puts "Locking #{s_spaces[3].downcase}'s userlist"
+					@users[s_spaces[3].downcase].freeze
+#					@notrecievingnames[s_spaces[3].downcase] == true # Wrongly named vars ftl
 			end
 		end
 	end
@@ -412,7 +433,7 @@ class IRCBot
 	end
 	# Checks for user-accessible commands.
 	def check_for_command(message,target,user,usermask)
-		if message[0..@configfile['commandidentifier'].length-1] == @configfile['commandidentifier'] then #TODO: unhardcode this
+		if message.start_with?(@configfile['commandidentifier']) then #TODO: unhardcode this
 			message_split = message.split
 			command = message_split[0] if message_split[1] != nil
 			command = message if message_split[1] == nil
@@ -533,7 +554,9 @@ class IRCBot
 					end
 				when "help"
 					if params == nil then
-						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~dieroll, ~faidio, ~faidwiki, ~stfu, ~karma, decision making. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
+						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~lyrics, ~faidio, ~faidwiki, ~stfu, ~karma, decision making. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
+					elsif params == "~lyrics" then
+						privmsg(target,"Check the lyrics for a song. Use like 'Band - Song' or '\"Song\" - Artist' (fuck you MoD)")
 					elsif params.strip == "~help" then
 						privmsg(target,"Usage: ~help ~command.")
 					elsif params.strip == "~coinflip" then
@@ -656,7 +679,7 @@ class IRCBot
 					end
 				when "die"
 					if is_auth_user?(usermask.split("@")[0]) then
-						disconnect()
+						disconnect(params)
 					else
 						privmsg(target,"Sorry Dave, I can't let you do that.")
 					end
@@ -853,8 +876,13 @@ class IRCBot
 					privmsg(target,"YES! DO IT!")
 			end
 		else
-			count = rand(stuff.count + 1)
-			privmsg(target,stuff[count-1])
+#			count = rand(stuff.count + 1)
+#			privmsg(target,stuff[count-1])
+			choices = []
+			for thing in stuff
+				choices.push [thing,Digest::SHA1.new << thing]
+			end
+			privmsg(target,choices.sort {|x,y| x[1].to_s <=> y[1].to_s}[0][0])
 		end
 	end
 end
