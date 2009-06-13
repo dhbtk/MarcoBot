@@ -9,7 +9,6 @@ require "yaml"
 require "net/http"
 require "rexml/document"
 require "hpricot"
-require "digest/sha1"
 require "faidio"
 require "wiki"
 require "macros"
@@ -876,13 +875,8 @@ class IRCBot
 					privmsg(target,"YES! DO IT!")
 			end
 		else
-#			count = rand(stuff.count + 1)
-#			privmsg(target,stuff[count-1])
-			choices = []
-			for thing in stuff
-				choices.push [thing,Digest::SHA1.new << thing]
-			end
-			privmsg(target,choices.sort {|x,y| x[1].to_s <=> y[1].to_s}[0][0])
+			count = rand(stuff.count + 1)
+			privmsg(target,stuff[count-1])
 		end
 	end
 end
