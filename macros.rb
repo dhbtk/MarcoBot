@@ -12,7 +12,7 @@ module Macros
 				triggers.push macro_split[0]
 			end
 		end
-		if !triggers.empty? then
+		if !triggers.empty? and @yamlmacros[triggers.sort{ |x,y| y.length <=> x.length }[0]] != "" then
 			triggers.sort! { |x,y| y.length <=> x.length }
 			macro = @yamlmacros[triggers[0]]
 			if @macrotime[triggers[0]] != nil then
