@@ -10,12 +10,16 @@ require "net/http"
 require "rexml/document"
 require "hpricot"
 require "digest/sha1"
+require 'gtk2'
+# Local deps
 require "faidio"
 require "wiki"
 require "macros"
 require "karma"
 require "calc"
 require "lyrics"
+require 'debugging'
+require 'truco'
 # The One True Class, contains all of the methods here
 class IRCBot
 	attr_accessor :rawlogfile, :logarray, :configfile, :karmafile
@@ -25,9 +29,12 @@ class IRCBot
 	include Karma
 	include Calc
 	include Lyrics
+	include Debugging
+	include Truco
 	# initialize: get these nasty vars and make them globals.
 	#
 	def initialize(server,port,nick,autojoin_channels,ns_password,basepath,configfile,rcpath)
+		@debug = ""
 		@rcpath = rcpath
 		@server = configfile['server'].strip
 		@port = configfile['port']
@@ -54,10 +61,13 @@ class IRCBot
 		@message_queue = []
 		@users = {} # Userlist
 		@rawusers = {}
-		@notrecievingnames = {}
 #		@blocking = false
-		@mychanmode = {}
 		karma_init()
+		@debugwindow = nil
+		trivia_init()
+		@trivia_question = {}
+		@trivia_started = {}
+		@old_trivia_question = {}
 	end
 	# sends stuff through the socket
 	#
@@ -147,7 +157,7 @@ class IRCBot
 		if s.start_with?(":#{@server}") then
 			log("Network",@server,s.strip,"network")
 			# Server message time! :naos.foonetic.net 353 NieXS @ #FaiD :
-			puts "Network message"
+			puts "Network message: #{s}"
 			case s_spaces[1]
 				when "353" # NAMES list
 					puts "recieving NAMES list"
@@ -166,7 +176,7 @@ class IRCBot
 					@users[s_spaces[4].downcase] = @users[s_spaces[4].downcase] + userlist
 					@rawusers[s_spaces[4].downcase] = @rawusers[s_spaces[4].downcase] + rawuserlist
 					
-					puts userlist
+					puts userlist.join(", ")
 				when "366" # EONAMES
 					puts "Locking #{s_spaces[3].downcase}'s userlist"
 					@users[s_spaces[3].downcase].freeze
@@ -178,14 +188,17 @@ class IRCBot
 	#
 	def main_loop()
 		while @connected
-			ready = select([@irc],nil,nil,0.5)
+			ready = select([@irc],nil,nil,0.1)
 			if ready then
 				return if @irc.eof
 				s = @irc.gets
 				rawlog(s)
 				handle_server_input(s)
 			end
-			handle_queue()	
+			handle_queue()
+			while (Gtk.events_pending?)
+				Gtk.main_iteration
+			end
 		end
 	end
 	# Handles the message queue
@@ -198,9 +211,9 @@ class IRCBot
 				when 0
 					puts "High-priority message"
 				when 1
-					sleep 0.3
+					sleep 0.8
 				else
-					sleep 1
+					sleep 2
 			end
 			send_message(message[0],message[1])
 		end
@@ -209,7 +222,7 @@ class IRCBot
 	#
 	def rawlog(s)
 #		puts "#{timestamp(Time.new)} #{s}" 
-		@rawlogfile = File.open("/var/log/marcobot/rawlog","a+") if @rawlogfile.class != File
+		@rawlogfile = File.open("/var/log/marcobot/rawlog","a+") if @rawlogfile.class != File or @rawlogfile.closed?
 		@rawlogfile.puts("#{timestamp(Time.new)}> #{s}")
 		
 	end
@@ -245,6 +258,9 @@ class IRCBot
 			elsif message.strip.start_with?("#{@configfile['nick']}, ")
 				decide(target,message.strip.sub("#{@configfile['nick']}, ",""))
 			end
+			if message.strip.start_with?("A:") then
+				check_trivia_answer(target,message.strip.sub("A: ",""),user)
+			end
 		else
 			# Stuff in a PM.
 			check_for_command(message,user,user,usermask)
@@ -268,14 +284,11 @@ class IRCBot
 	# Handles topic changes
 	#
 	def handle_topic(user,channel,newtopic)
-		#TODO
 		log(channel,user,newtopic,"topic")
-
 	end
 	# Handles kicking
 	#
 	def handle_kick(kicker,kicked,channel,cause)
-		#TODO: Call for logging
 		if kicked == @configfile['nick'] then
 			send "JOIN #{channel}"
 			emote(channel,"kicks #{kicker.split("!")[0]} in the face")
@@ -286,8 +299,7 @@ class IRCBot
 	end
 	# What to do when you should do something which I forget now oh gods halp
 	# 
-	def startup_routine()
-		
+	def startup_routine()		
 		send("MODE #{@configfile['nick']} +TB")
 		if @configfile['debugmode'] != 'yes' then
 			for channel in @channel
@@ -319,9 +331,9 @@ class IRCBot
 	#
 	def log(target,user,message,command)
 		if target != nil then
-		filepath = "/var/log/marcobot/logs/#{target.strip}-#{Time.new.day}-#{Time.new.month}-#{Time.new.year}".downcase
+		filepath = "/var/log/marcobot/logs/#{target.sub(":","").strip}-#{Time.new.day}-#{Time.new.month}-#{Time.new.year}".downcase
 		if File.exists?(filepath) then
-			@logarray[filepath] = File.open(filepath,"a") if @logarray[filepath].class != File
+			@logarray[filepath] = File.open(filepath,"a") if @logarray[filepath].class != File or @logarray[filepath].closed?
 		else
 			@logarray[filepath] = File.new(filepath,"a")
 		end
@@ -433,7 +445,7 @@ class IRCBot
 	end
 	# Checks for user-accessible commands.
 	def check_for_command(message,target,user,usermask)
-		if message.start_with?(@configfile['commandidentifier']) then #TODO: unhardcode this
+		if message.start_with?(@configfile['commandidentifier']) then
 			message_split = message.split
 			command = message_split[0] if message_split[1] != nil
 			command = message if message_split[1] == nil
@@ -444,6 +456,28 @@ class IRCBot
 				params = params.strip
 			end
 			case command
+				when "addquestion"
+					if params == nil or params.split("<is>").count <= 1 then
+						privmsg(target,"Usage: #{@configfile['commandidentifier']}addquestion Question?<is>Answer")
+					else
+						question = params.split("<is>")[0]
+						answer = params.sub("#{params.split("<is>")[0]}<is>","")
+						@trivia_questions.push("#{question}\n#{answer}")
+						File.open("#{@basepath}trivia","w") do |file|
+							file << @trivia_questions.to_yaml
+						end
+						trivia_init()
+						privmsg(target,"Question added.")
+					end
+				when "trivia"
+					if @trivia_started[target] == nil or @trivia_started[target] == false then
+						@trivia_started[target] = true
+						privmsg(target,"Trivia started.")
+						trivia_question(target)
+					else
+						@trivia_started[target] = false
+						privmsg(target,"Trivia has ended.")
+					end
 				when "lyrics"
 					if params != nil then
 						if params.split(" - ").count != 2 then
@@ -554,7 +588,7 @@ class IRCBot
 					end
 				when "help"
 					if params == nil then
-						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~lyrics, ~faidio, ~faidwiki, ~stfu, ~karma, decision making. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
+						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~lyrics, ~faidio, ~faidwiki, ~stfu, ~karma, decision making, ~trivia, ~addquestion. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
 					elsif params == "~lyrics" then
 						privmsg(target,"Check the lyrics for a song. Use like 'Band - Song' or '\"Song\" - Artist' (fuck you MoD)")
 					elsif params.strip == "~help" then
@@ -587,6 +621,10 @@ class IRCBot
 						privmsg(target,"Karma's a bitch.")
 					elsif params.strip == "decision making" then
 						privmsg(target,"Ask me, with my username first, about something or other.")
+					elsif params.strip == "~trivia" then
+						privmsg(target,"Starts/ends trivia on the current channel.")
+					elsif params.strip == "~addquestion" then
+						privmsg(target,"Adds a question to the trivia question database. Usage: ~addquestion Question?<is>Answer")
 					else
 						send("NOTICE #{user} :No such command. Contradictions are lies.")
 					end
@@ -802,7 +840,7 @@ class IRCBot
 					if params == nil then
 						privmsg(target,'Whose karma?')
 					else
-						get_karma(target,params.sub("#{@configfile['commandidentifier']}karma ","").strip)
+						get_karma(target,params.strip)
 					end
 				when "userlist"
 					if is_auth_user?(usermask.split("@")[0]) then
@@ -814,7 +852,6 @@ class IRCBot
 	# Throws dice or something
 	def dieroll(target,params)
 		if params != nil then
-			params.sub!("~dieroll ","")
 			if params.strip =~ /^[0-9]+d[0-9]+$/ then
 				dice_number = params.strip.split("d")[0].to_i
 				side_number = params.strip.split("d")[1].sub("\n","").to_i
@@ -883,6 +920,25 @@ class IRCBot
 				choices.push [thing,Digest::SHA1.new << thing]
 			end
 			privmsg(target,choices.sort {|x,y| x[1].to_s <=> y[1].to_s}[0][0])
+		end
+	end
+	def trivia_init()
+		@trivia_questions = YAML::load(File.open("#{@basepath}trivia"))
+	end
+	def trivia_question(target)
+		@old_trivia_question[target.downcase] = @trivia_question[target.downcase]
+		@trivia_question[target.downcase] = @trivia_questions.sort_by{rand}[rand(@trivia_questions.count)]
+		while @trivia_question[target.downcase] == @old_trivia_question[target.downcase]
+			@trivia_question[target.downcase] = @trivia_questions.sort_by{rand}[rand(@trivia_questions.count)]
+		end
+		privmsg(target,"Q: #{@trivia_question[target.downcase].split("\n")[0]}")
+	end
+	def check_trivia_answer(target,answer,user)
+		if @trivia_question[target.downcase].split("\n")[1].strip.downcase == answer.downcase then
+			privmsg(target,"Correct, #{user}!")
+			trivia_question(target)
+		else
+			privmsg(target,"Wrong. Try harder.")
 		end
 	end
 end
