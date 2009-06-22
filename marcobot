@@ -258,8 +258,8 @@ class IRCBot
 			elsif message.strip.start_with?("#{@configfile['nick']}, ")
 				decide(target,message.strip.sub("#{@configfile['nick']}, ",""))
 			end
-			if message.strip.start_with?("A:") then
-				check_trivia_answer(target,message.strip.sub("A: ",""),user)
+			if message.strip.start_with?("A:") and @trivia_started[target.downcase] == true then
+				check_trivia_answer(target,message.strip.sub("A:",""),user)
 			end
 		else
 			# Stuff in a PM.
@@ -470,12 +470,15 @@ class IRCBot
 						privmsg(target,"Question added.")
 					end
 				when "trivia"
+					target = target.downcase
+					@old_trivia_question[target] = nil
 					if @trivia_started[target] == nil or @trivia_started[target] == false then
 						@trivia_started[target] = true
 						privmsg(target,"Trivia started.")
 						trivia_question(target)
 					else
 						@trivia_started[target] = false
+						@trivia_question[target.downcase] = ""
 						privmsg(target,"Trivia has ended.")
 					end
 				when "lyrics"
@@ -924,17 +927,31 @@ class IRCBot
 	end
 	def trivia_init()
 		@trivia_questions = YAML::load(File.open("#{@basepath}trivia"))
+		@trivia_questions=@trivia_questions.sort_by { rand }
 	end
 	def trivia_question(target)
-		@old_trivia_question[target.downcase] = @trivia_question[target.downcase]
-		@trivia_question[target.downcase] = @trivia_questions.sort_by{rand}[rand(@trivia_questions.count)]
-		while @trivia_question[target.downcase] == @old_trivia_question[target.downcase]
-			@trivia_question[target.downcase] = @trivia_questions.sort_by{rand}[rand(@trivia_questions.count)]
+		target = target.downcase
+		if @old_trivia_question[target.downcase] == nil then
+			@old_trivia_question[target] = []
 		end
-		privmsg(target,"Q: #{@trivia_question[target.downcase].split("\n")[0]}")
+		has_new_questions = false
+		for question in @trivia_questions
+			if !@old_trivia_question[target].include?(question) then
+				has_new_questions = true
+				@trivia_question[target] = question
+			end
+		end
+		if has_new_questions then
+			@old_trivia_question[target].push @trivia_question[target]
+			privmsg(target,"Q: #{@trivia_question[target.downcase].split("\n")[0]}")	
+		else
+			privmsg(target,"No more questions :(")
+			@trivia_started[target] = false
+			@trivia_questions=@trivia_questions.sort_by { rand }
+		end		
 	end
 	def check_trivia_answer(target,answer,user)
-		if @trivia_question[target.downcase].split("\n")[1].strip.downcase == answer.downcase then
+		if @trivia_question[target.downcase].split("\n")[1].downcase.gsub(/(:|,|\.|\!|\?|;|'|")/,"").gsub(" an ","").gsub(" a ","").gsub(" the ","").strip.gsub(" ","") == answer.downcase.gsub(/(:|,|\.|\!|\?|;|'|")/,"").gsub(" an ","").gsub(" a ","").gsub(" the ","").strip.gsub(" ","")  then
 			privmsg(target,"Correct, #{user}!")
 			trivia_question(target)
 		else
