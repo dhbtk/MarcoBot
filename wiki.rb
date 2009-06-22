@@ -4,10 +4,16 @@ require 'hpricot'
 module Wiki
 	# Returns the first paragraph of a MediaWiki wiki article
 	def mediawiki_lookup(address,path,article, limit = 10)
+		puts "LOOKING UP MEDIAWIKI ARTICLE"
+		puts "address+path: #{address}#{path}"
 		article = article.strip.gsub(" ","_")
+		puts "Article: #{article}"
+				
 		Net::HTTP.start(address,80) do |wiki|
+			puts "Requesting..."
 			req = Net::HTTP::Get.new("#{path}#{article}")
 			reply = wiki.request(req)
+			puts "Wiki reply messsage: #{reply.message}"
 			case reply.message
 				when "Moved Temporarily"
 					mediawiki_lookup(address,path,article,limit-1)
