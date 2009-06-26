@@ -4,34 +4,40 @@ require 'hpricot'
 module Wiki
 	# Returns the first paragraph of a MediaWiki wiki article
 	def mediawiki_lookup(address,path,article, limit = 10)
-		puts "LOOKING UP MEDIAWIKI ARTICLE"
-		puts "address+path: #{address}#{path}"
-		article = article.strip.gsub(" ","_")
-		puts "Article: #{article}"
-				
-		Net::HTTP.start(address,80) do |wiki|
-			puts "Requesting..."
-			req = Net::HTTP::Get.new("#{path}#{article}")
-			reply = wiki.request(req)
-			puts "Wiki reply messsage: #{reply.message}"
-			case reply.message
-				when "Moved Temporarily"
-					mediawiki_lookup(address,path,article,limit-1)
-				when "OK"
-					# OK, we have an article
-					art = Hpricot(reply.body)
-					paragraph = art.at("p").to_s
-					paragraph = paragraph.sub("<p>","").sub("</p>","").gsub("\n"," ").gsub("<b>",2.chr).gsub("</b>",2.chr).gsub(/<a(.+?)>/,0x1F.chr).gsub("</a>",0x1F.chr).gsub(/<(.+?)>/,"")
-					# Splitting 'n stuff
-					if paragraph.length >= 400 then
-						split_paragraph = paragraph.scan(/.{1,400}/)
-						return split_paragraph
+		if limit > 0 then
+			puts "LOOKING UP MEDIAWIKI ARTICLE"
+			puts "address+path: #{address}#{path}"
+			article = article.strip.gsub(" ","_")
+			puts "Article: #{article}"
+					
+			Net::HTTP.start(address,80) do |wiki|
+				puts "Requesting..."
+				req = Net::HTTP::Get.new("#{path}#{article}")
+				reply = wiki.request(req)
+				puts "Wiki reply messsage: #{reply.message}"
+				case reply.message
+					when "Moved Temporarily"
+						mediawiki_lookup(address,path,reply.header['location'].sub(/(.+?)\:\/\//,"").sub(address+path,""),limit-1)
+					when "Moved Permanently"
+						mediawiki_lookup(address,path,reply.header['location'].sub(/(.+?)\:\/\//,"").sub(address+path,""),limit-1)
+					when "OK"
+						# OK, we have an article
+						art = Hpricot(reply.body)
+						paragraph = art.at("p").to_s
+						paragraph = paragraph.sub("<p>","").sub("</p>","").gsub("\n"," ").gsub("<b>",2.chr).gsub("</b>",2.chr).gsub(/<a(.+?)>/,0x1F.chr).gsub("</a>",0x1F.chr).gsub(/<(.+?)>/,"")
+						# Splitting 'n stuff
+						if paragraph.length >= 400 then
+							split_paragraph = paragraph.scan(/.{1,400}/)
+							return split_paragraph
+						else
+							return [paragraph]
+						end
 					else
-						return [paragraph]
-					end
-				else
-					return ["Not Found"]
+						return ["Not Found"]
+				end
 			end
+		else
+			return ['Redirect loop detected, aborting']
 		end
 	end
 	# Looks up an article on Wikipedia. Somewhat useful, although buggy
