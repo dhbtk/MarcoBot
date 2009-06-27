@@ -313,7 +313,14 @@ class IRCBot
 	# Adds a message to the queue
 	#
 	def privmsg(target,message,priority = 1)
-		@message_queue.push([target,message,priority])
+		if message.length >= 400 then
+			message_split = message.scan(/.{1,400}/)
+			for message in message_split
+				@message_queue.push([target,message,priority])
+			end
+		else
+			@message_queue.push([target,message,priority])
+		end
 	end
 	# Sends a message bypassing the queue. Should only be used by handle_queue()
 	#

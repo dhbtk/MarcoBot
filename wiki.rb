@@ -24,6 +24,36 @@ module Wiki
 						# OK, we have an article
 						art = Hpricot(reply.body)
 						paragraph = art.at("p").to_s
+						puts "Paragraph:"
+						puts paragraph
+						puts "Stripped paragraph:"
+						paragraph = paragraph.sub("<p>","").sub("</p>","").gsub("\n"," ").gsub("<b>",2.chr).gsub("</b>",2.chr).gsub(/<a(.+?)>/,0x1F.chr).gsub("</a>",0x1F.chr).gsub(/<(.+?)>/,"")
+						puts paragraph
+						if paragraph[-1..-1] == ":" then
+							puts "Is list! Lists:"
+							lists = art.search("li").to_a
+							puts lists.join(", ")
+							if lists.count <7 then
+								puts "List is <7! Adding it all."
+								paragraph = paragraph + lists.join("; ")
+							else
+								puts "List is longer than 7! Adding the first 7."
+								i = 0
+								while i <= 6
+									puts "Added list: #{lists[i]}"
+									paragraph = paragraph + "; " + lists[i].to_s
+									puts "Added paragraph"
+									i = i + 1
+									puts "incremented counter"
+									
+								end
+							end
+							paragraph = paragraph + "."
+							puts "Result:"
+							puts paragraph
+						elsif paragraph.start_with?("#{0x1F.chr}Coordinates#{0x1F.chr}:") then
+							paragraph = art.search("p").to_a[1].to_s
+						end
 						paragraph = paragraph.sub("<p>","").sub("</p>","").gsub("\n"," ").gsub("<b>",2.chr).gsub("</b>",2.chr).gsub(/<a(.+?)>/,0x1F.chr).gsub("</a>",0x1F.chr).gsub(/<(.+?)>/,"")
 						# Splitting 'n stuff
 						if paragraph.length >= 400 then
