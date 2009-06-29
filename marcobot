@@ -11,6 +11,7 @@ require "rexml/document"
 require "hpricot"
 require "digest/sha1"
 require 'gtk2'
+require 'timeout'
 # Local deps
 require "faidio"
 require "wiki"
@@ -463,6 +464,21 @@ class IRCBot
 				params = params.strip
 			end
 			case command
+				when "isdown"
+					if params != nil then
+						begin
+							timeout(5) do
+								@sock = TCPSocket.new(params.strip,'80')
+							end
+						rescue Exception
+							privmsg(target,"Site is down!")
+						else
+							@sock.close
+							privmsg(target,"It's just you.")
+						end
+					else
+						privmsg(target,"I need a site to check.")
+					end
 				when "addquestion"
 					if params == nil or params.split("<is>").count <= 1 then
 						privmsg(target,"Usage: #{@configfile['commandidentifier']}addquestion Question?<is>Answer")
@@ -598,7 +614,7 @@ class IRCBot
 					end
 				when "help"
 					if params == nil then
-						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~lyrics, ~faidio, ~faidwiki, ~stfu, ~karma, decision making, ~trivia, ~addquestion. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
+						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~lyrics, ~faidio, ~faidwiki, ~stfu, ~karma, decision making, ~trivia, ~addquestion, ~isdown. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
 					elsif params == "~lyrics" then
 						privmsg(target,"Check the lyrics for a song. Use like 'Band - Song' or '\"Song\" - Artist' (fuck you MoD)")
 					elsif params.strip == "~help" then
@@ -635,6 +651,8 @@ class IRCBot
 						privmsg(target,"Starts/ends trivia on the current channel.")
 					elsif params.strip == "~addquestion" then
 						privmsg(target,"Adds a question to the trivia question database. Usage: ~addquestion Question?<is>Answer")
+					elsif params.strip == "~isdown" then
+						privmsg(target,"Checks if a site is down. Usage: #{@configfile['commandidentifier']}isdown site.com")
 					else
 						send("NOTICE #{user} :No such command. Contradictions are lies.")
 					end
