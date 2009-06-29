@@ -19,7 +19,7 @@ module Karma
 		usermask = user
 		user = usermask.split("!")[1].downcase
 		actualuser = usermask.split("!")[0].downcase
-		if message.start_with?("<3 ") or message.strip.end_with? == "++" then
+		if message.start_with?("<3 ") or message[-2..-1] == "++" then
 			puts "Adding karma"
 			if message.start_with?("<3 ") then
 				target = message.sub("<3 ","").strip.downcase
@@ -36,7 +36,7 @@ module Karma
 				puts "target/#{target.class}/#{target}"
 				puts "coefficient/#{coefficient.class}/#{coefficient}"
 			end
-		elsif message.start_with?("</3 ") or message.strip.end_with? == "--" then
+		elsif message.start_with?("</3 ") or message[-2..-1] == "--" then
 			puts "subtracting karma"
 			if message.start_with?("</3 ") then
 				target = message.sub("</3 ","").strip.downcase
