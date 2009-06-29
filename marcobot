@@ -454,7 +454,16 @@ class IRCBot
 	# Checks for user-accessible commands.
 	def check_for_command(message,target,user,usermask)
 		if message.start_with?(@configfile['commandidentifier']) then
+			command = message.sub(@configfile['commandidentifier'],"")
+			params = command
+			command = command.split(" ")[0]
+			if params.include?("#{command} ") then
+				params = params.sub("#{command} ","").strip
+			else
+				params = nil
+			end
 			message_split = message.split
+=begin beta code
 			command = message_split[0] if message_split[1] != nil
 			command = message if message_split[1] == nil
 			command = command.sub(@configfile['commandidentifier'],"").strip
@@ -463,6 +472,7 @@ class IRCBot
 				params = message_split.join(" ")
 				params = params.strip
 			end
+=end
 			case command
 				when "isdown"
 					if params != nil then
@@ -851,10 +861,11 @@ class IRCBot
 					end
 				when "config"
 					if is_auth_user?(usermask.split("@")[0]) then
-						params = params.sub(@configfile['commandidentifier']+"config","").strip
-						if params =~ /(.+?)=(.+?)/ then
+						if params =~ /(.+?)="(.+)"/ then
 							config = params.split("=")[0]
 							config_params = params.sub(params.split("=")[0]+"=","")
+							config_params[-1] = ""
+							config_params[0] = ""
 							@configfile[config] = config_params
 							privmsg(target,"Config option \"#{config}\" has been set to \"#{config_params}\".")
 						else
