@@ -466,9 +466,16 @@ class IRCBot
 			case command
 				when "isdown"
 					if params != nil then
+						if params.split(":").count > 1 then
+							port = params.split(":")[1].strip
+							server = params.split(":")[0].strip
+						else
+							server = params.strip
+							port = '80'
+						end
 						begin
 							timeout(5) do
-								@sock = TCPSocket.new(params.strip,'80')
+								@sock = TCPSocket.new(server,port)
 							end
 						rescue Exception
 							privmsg(target,"Site is down!")
@@ -476,6 +483,7 @@ class IRCBot
 							@sock.close
 							privmsg(target,"It's just you.")
 						end
+						@sock = nil
 					else
 						privmsg(target,"I need a site to check.")
 					end
@@ -652,7 +660,7 @@ class IRCBot
 					elsif params.strip == "~addquestion" then
 						privmsg(target,"Adds a question to the trivia question database. Usage: ~addquestion Question?<is>Answer")
 					elsif params.strip == "~isdown" then
-						privmsg(target,"Checks if a site is down. Usage: #{@configfile['commandidentifier']}isdown site.com")
+						privmsg(target,"Checks if a site is down. Usage: #{@configfile['commandidentifier']}isdown site.com:optionalport")
 					else
 						send("NOTICE #{user} :No such command. Contradictions are lies.")
 					end
