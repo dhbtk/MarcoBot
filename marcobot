@@ -242,7 +242,7 @@ class IRCBot
 		if target[0..0] == "#" then
 			# Stuff that is happening in a chan
 			check_for_karma(message.strip,usermask,target)
-			check_for_macro(message,target,user) if @configfile['macrosenabled'] == 'true' and !@configfile['nomacrochans'].downcase.split(",").include?(target.downcase)
+			check_for_macro(message,target,user) if @configfile['macrosenabled'] == 'true' and !@configfile['nomacrochans'].downcase.split(",").include?(target.downcase) and !message.start_with?("#{@configfile['commandidentifier']}macrocheck")
 			check_for_command(message,target,user,usermask)
 			if message.sub("ACTION ","") == message then
 				log(target,user,message,"privmsg")
