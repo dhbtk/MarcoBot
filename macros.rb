@@ -55,7 +55,10 @@ module Macros
 			if macroarray[2] >= @configfile['macrotimeout'].to_i then
 				privmsg(target,"The phrase \"#{message}\" triggers the macro \"#{macroarray[1].chomp}\".",0)
 			else
-				timeout = (((Time.new + @configfile['macrotimeout'].to_i).to_i - (Time.new - (Time.new - @macrotime[macroarray[0]])).to_i) - @configfile['macrotimeout'].to_i)*(-1) # I DON'T EVEN UNDERSTAND THIS ANYMORE
+				timeout = (Time.new - macroarray[2]).to_i
+				timeout = Time.new.to_i - timeout
+				timeout = timeout - @configfile['macrotimeout'].to_i
+				timeout = timeout*(-1)
 				privmsg(target,"The phrase \"#{message}\" will trigger the macro \"#{macroarray[1].chomp}\" in #{timeout.to_i} seconds.",0)
 			end
 		else
