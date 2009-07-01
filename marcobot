@@ -691,25 +691,7 @@ class IRCBot
 				when "coinflip"
 					coinflip(target)
 				when "8ball"
-					i = rand(8)
-					case i 
-						when 0
-							privmsg(target,"Of course.")
-						when 1
-							privmsg(target,"Mmm, perhaps.")
-						when 2
-							privmsg(target,"You shouldn't.")
-						when 3
-							privmsg(target,"Not really.")
-						when 4
-							privmsg(target,"Don't or you will suffer.")
-						when 5
-							privmsg(target,"You can't know for sure.")
-						when 6
-							privmsg(target,"You totally should.")
-						when 7
-							privmsg(target,"YES! DO IT!")
-					end
+					8ball(target)
 				when "leave"
 					user = usermask.split("!")[1]
 					 if target[0..0] == "#" then
@@ -921,6 +903,27 @@ class IRCBot
 				privmsg(target,"Usage: (one)d(two), one is the number of dice, and two is the number of sides.")	end
 		end
 	end
+	def 8ball(target)
+		i = rand(8)
+		case i 
+			when 0
+				privmsg(target,"Of course.")
+			when 1
+				privmsg(target,"Mmm, perhaps.")
+			when 2
+				privmsg(target,"You shouldn't.")
+			when 3
+				privmsg(target,"Not really.")
+			when 4
+				privmsg(target,"Don't or you will suffer.")
+			when 5
+				privmsg(target,"You can't know for sure.")
+			when 6
+				privmsg(target,"You totally should.")
+			when 7
+				privmsg(target,"YES! DO IT!")
+		end
+	end
 	# Flips a coin
 	def coinflip(target)
 		i = rand(2)
@@ -938,31 +941,13 @@ class IRCBot
 		end
 		stuff = message.split(" or ")
 		if stuff.count == 1 then
-			i = rand(8)
-			case i 
-				when 0
-					privmsg(target,"Of course.")
-				when 1
-					privmsg(target,"Mmm, perhaps.")
-				when 2
-					privmsg(target,"You shouldn't.")
-				when 3
-					privmsg(target,"Not really.")
-				when 4
-					privmsg(target,"Don't or you will suffer.")
-				when 5
-					privmsg(target,"You can't know for sure.")
-				when 6
-					privmsg(target,"You totally should.")
-				when 7
-					privmsg(target,"YES! DO IT!")
-			end
+			8ball(target)
 		else
 #			count = rand(stuff.count + 1)
 #			privmsg(target,stuff[count-1])
 			choices = []
 			for thing in stuff
-				choices.push [thing,Digest::SHA1.new << thing]
+				choices.push [thing,Digest::SHA1.new << thing.downcase]
 			end
 			privmsg(target,choices.sort {|x,y| x[1].to_s <=> y[1].to_s}[0][0])
 		end
