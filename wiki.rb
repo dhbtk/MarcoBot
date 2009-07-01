@@ -1,6 +1,7 @@
 require 'net/http'
 require 'rubygems'
 require 'hpricot'
+require 'open-uri'
 module Wiki
 	# Returns the first paragraph of a MediaWiki wiki article
 	def mediawiki_lookup(address,path,article, limit = 10)
@@ -90,4 +91,25 @@ module Wiki
 			end
 		end
 	end
+	
+	def search_wiki(target,article,wiki)
+		doc = Hpricot(open("http://www.google.com/search?q=site:#{wiki}+#{article.gsub(" ","+")}"))
+		address = doc.at("li.g a")
+		if address != nil then
+			address = address['href']
+			address = address.sub(/(.+?)\:\/\//,"")
+			site = address.split("/")[0]
+			path = address.sub(address.split("/")[0],"").sub(address.split("/")[-1],"")
+				if path[-1].chr != "/" then path = path + "/"; end
+			article = address.split("/")[-1]
+			
+			wiki = mediawiki_lookup(site,path,article)
+			
+			for item in wiki
+				privmsg(target,item,2)
+			end
+		else
+			privmsg(target,"Not found. Search harder.")
+		end
+	end	
 end
