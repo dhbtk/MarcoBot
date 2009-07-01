@@ -22,8 +22,9 @@ module Wiki
 						mediawiki_lookup(address,path,reply.header['location'].sub(/(.+?)\:\/\//,"").sub(address+path,""),limit-1)
 					when "OK"
 						# OK, we have an article
+						artpath = address+path+article
 						art = Hpricot(reply.body)
-						paragraph = art.at("p").to_s
+						paragraph = art.at("p").to_s	
 						puts "Paragraph:"
 						puts paragraph
 						puts "Stripped paragraph:"
@@ -58,9 +59,9 @@ module Wiki
 						# Splitting 'n stuff
 						if paragraph.length >= 400 then
 							split_paragraph = paragraph.scan(/.{1,400}/)
-							return split_paragraph
+							return ["Article: http://#{artpath}"] + split_paragraph
 						else
-							return [paragraph]
+							return ["Article: http://#{artpath}"] + [paragraph]
 						end
 					else
 						return ["Not Found"]
