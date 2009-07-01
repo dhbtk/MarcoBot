@@ -56,8 +56,6 @@ class IRCBot
 		@macrotime = Hash.new
 		@macrofile = File.open("#{@basepath}macros","r")
 		@yamlmacros = YAML::load(@macrofile)
-		@macrofile.rewind
-		@macros = @macrofile.readlines
 		@configfile = configfile
 		@message_queue = []
 		@users = {} # Userlist

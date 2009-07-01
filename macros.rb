@@ -6,10 +6,9 @@ module Macros
 		macros = []
 		triggers = []
 		outputarray = []
-		for macro in @macros
-			macro_split = macro.split(": ")
-			if message.downcase.include?(macro_split[0].downcase) and macro_split[0] != " " then
-				triggers.push macro_split[0]
+		for macro in @yamlmacros
+			if message.downcase.include?(macro[0].downcase) and !macro[0].empty? then
+				triggers.push macro[0]
 			end
 		end
 		if !triggers.empty? and @yamlmacros[triggers.sort{ |x,y| y.length <=> x.length }[0]] != "" then
@@ -86,8 +85,6 @@ module Macros
 		end
 		@macrofile = File.open("#{@basepath}macros","r")
 		@yamlmacros = YAML::load(@macrofile)
-		@macrofile.rewind
-		@macros = @macrofile.readlines
 	end
 	def macro_trim()
 		for a in @yamlmacros
