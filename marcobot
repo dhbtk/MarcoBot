@@ -769,12 +769,28 @@ class IRCBot
 				when "wiki"
 					if params != nil then
 						privmsg(target,"Wikiing, hold on...")
-						find_wiki(target,params,user)
+						search_wiki(target,params,"en.wikipedia.org")
 					else
 						privmsg(target,"Getting a random, hold on...")
 						find_wiki(target,"Special:Random",user)
 					end
 				when "faidwiki"
+					if params != nil then
+						privmsg(target,"Wikiing, hold on...")
+						search_wiki(target,params,"faidwiki.niexs.net")
+					else
+						privmsg(target,"Getting a random, hold on...")
+						find_faidwiki(target,"Special:Random",user)
+					end				
+				when "oldwiki"
+					if params != nil then
+						privmsg(target,"Wikiing, hold on...")
+						find_wiki(target,params,user)
+					else
+						privmsg(target,"Getting a random, hold on...")
+						find_wiki(target,"Special:Random",user)
+					end
+				when "oldfaidwiki"
 					if params != nil then
 						privmsg(target,"Looking up...")
 						find_faidwiki(target,params,user)
