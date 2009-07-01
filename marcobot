@@ -691,7 +691,7 @@ class IRCBot
 				when "coinflip"
 					coinflip(target)
 				when "8ball"
-					8ball(target)
+					eightball(target)
 				when "leave"
 					user = usermask.split("!")[1]
 					 if target[0..0] == "#" then
@@ -903,7 +903,7 @@ class IRCBot
 				privmsg(target,"Usage: (one)d(two), one is the number of dice, and two is the number of sides.")	end
 		end
 	end
-	def 8ball(target)
+	def eightball(target)
 		i = rand(8)
 		case i 
 			when 0
@@ -941,7 +941,7 @@ class IRCBot
 		end
 		stuff = message.split(" or ")
 		if stuff.count == 1 then
-			8ball(target)
+			eightball(target)
 		else
 #			count = rand(stuff.count + 1)
 #			privmsg(target,stuff[count-1])
