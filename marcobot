@@ -644,47 +644,52 @@ class IRCBot
 					end
 				when "help"
 					if params == nil then
-						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~dieroll, ~echo, ~lyrics, ~faidio, ~faidwiki, ~stfu, ~karma, decision making, ~trivia, ~addquestion, ~isdown. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
-					elsif params == "~lyrics" then
-						privmsg(target,"Check the lyrics for a song. Use like 'Band - Song' or '\"Song\" - Artist' (fuck you MoD)")
-					elsif params.strip == "~help" then
-						privmsg(target,"Usage: ~help ~command.")
-					elsif params.strip == "~coinflip" then
-						privmsg(target,"Flips a coin [citation needed] and shows the outcome. Can also be used as \"ACTION flips a coin\"")
-					elsif params.strip == "~8ball" then
-						privmsg(target,"Ask a question to the mighty 8-ball. \"Should I?\" questions are preferred.")
-					elsif params.strip == "~leave" then
-						privmsg(target,"Adds a vote for me to leave. Six votes = leave channel.")
-					elsif params.strip == "~live" then
-						privmsg(target,"Unvotes.")
-					elsif params.strip == "~thetime" then
-						privmsg(target,"Prints the local time.")
-					elsif params.strip == "~shutup" then
-						privmsg(target,"Toggles macros.")
-					elsif params.strip == "~macro" then
-						privmsg(target,"Sets macros. They must have more than five characters. Setting them to a space removes them. Usage: ~macro input phrase=output phrase")
-					elsif params.strip == "~wiki" then
-						privmsg(target,"Usage: ~wiki Article. Case-sensitive. Buggy as hell, use at your own risk.")
-					elsif params.strip == "~dieroll" then
-						privmsg(target,"Usage: \"~dieroll (one)d(two)\" or \" ACTION rolls (one)d(two)\". One must be smaller than 11, and two must be smaller than 20,000.")
-					elsif params.strip == "~faidio" then
-						privmsg(target,"Shows the FaiDio streams.")
-					elsif params.strip == "~stfu" then
-						privmsg(target,"Clears the message queue. Useful for spam-y situations.")
-					elsif params.strip == "~faidwiki" then
-						privmsg(target,"Looks up an article on the FaiDwiki.")
-					elsif params.strip == "~karma" then
-						privmsg(target,"Karma's a bitch.")
-					elsif params.strip == "decision making" then
-						privmsg(target,"Ask me, with my username first, about something or other.")
-					elsif params.strip == "~trivia" then
-						privmsg(target,"Starts/ends trivia on the current channel.")
-					elsif params.strip == "~addquestion" then
-						privmsg(target,"Adds a question to the trivia question database. Usage: ~addquestion Question?<is>Answer")
-					elsif params.strip == "~isdown" then
-						privmsg(target,"Checks if a site is down. Usage: #{@configfile['commandidentifier']}isdown site.com:optionalport")
+						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~urbandict, ~dieroll, ~echo, ~lyrics, ~faidio, ~faidwiki, ~stfu, ~karma, decision making, ~trivia, ~addquestion, ~isdown. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
 					else
-						send("NOTICE #{user} :No such command. Contradictions are lies.")
+						case params
+							when "~lyrics"
+								privmsg(target,"Check the lyrics for a song. Use like 'Band - Song' or '\"Song\" - Artist' (fuck you MoD)")
+							when "~help"
+								privmsg(target,"Usage: ~help ~command.")
+							when "~coinflip"
+								privmsg(target,"Flips a coin [citation needed] and shows the outcome. Can also be used as \"ACTION flips a coin\"")
+							when "~8ball"
+								privmsg(target,"Ask a question to the mighty 8-ball. \"Should I?\" questions are preferred.")
+							when "~leave"
+								privmsg(target,"Adds a vote for me to leave. Six votes = leave channel.")
+							when "~live"
+								privmsg(target,"Unvotes.")
+							when "~thetime"
+								privmsg(target,"Prints the local time.")
+							when "~shutup"
+								privmsg(target,"Toggles macros.")
+							when "~macro"
+								privmsg(target,"Sets macros. They must have more than five characters. Setting them to a space removes them. Usage: ~macro input phrase=output phrase")
+							when "~wiki"
+								privmsg(target,"Usage: ~wiki Article. Case-sensitive. Buggy as hell, use at your own risk.")
+							when "~dieroll"
+								privmsg(target,"Usage: \"~dieroll (one)d(two)\" or \" ACTION rolls (one)d(two)\". One must be smaller than 11, and two must be smaller than 20,000.")
+							when "~faidio"
+								privmsg(target,"Shows the FaiDio streams.")
+							when "~stfu"
+								privmsg(target,"Clears the message queue. Useful for spam-y situations.")
+							when "~faidwiki"
+								privmsg(target,"Looks up an article on the FaiDwiki.")
+							when "~karma"
+								privmsg(target,"Karma's a bitch.")
+							when "decision making"
+								privmsg(target,"Ask me, with my username first, about something or other.")
+							when "~trivia"
+								privmsg(target,"Starts/ends trivia on the current channel.")
+							when "~addquestion"
+								privmsg(target,"Adds a question to the trivia question database. Usage: ~addquestion Question?<is>Answer")
+							when "~isdown"
+								privmsg(target,"Checks if a site is down. Usage: #{@configfile['commandidentifier']}isdown site.com:optionalport")
+							when "~urbandict"
+								privmsg(target,"Looks up something at UrbanDictionary.com.")
+							else
+								send("NOTICE #{user} :No such command. Contradictions are lies.")
+						end
 					end
 =begin
 					privmsg(user,"Commands:")
