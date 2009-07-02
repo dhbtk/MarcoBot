@@ -21,6 +21,7 @@ require "calc"
 require "lyrics"
 require 'debugging'
 require 'truco'
+require 'urbandict'
 # The One True Class, contains all of the methods here
 class IRCBot
 	attr_accessor :rawlogfile, :logarray, :configfile, :karmafile
@@ -32,6 +33,7 @@ class IRCBot
 	include Lyrics
 	include Debugging
 	include Truco
+	include Urbandict
 	# initialize: get these nasty vars and make them globals.
 	#
 	def initialize(server,port,nick,autojoin_channels,ns_password,basepath,configfile,rcpath)
@@ -472,6 +474,18 @@ class IRCBot
 			end
 =end
 			case command
+				when "urbandict"
+					if params != nil then
+						Thread.new do
+							privmsg(target,"Looking up...")
+							definition = urbandict_lookup(params)
+							for item in definition
+								privmsg(target,item,2)
+							end
+						end
+					else
+						privmsg(target,"What should I look up?")
+					end
 				when "isdown"
 					if params != nil then
 						if params.split(":").count > 1 then
