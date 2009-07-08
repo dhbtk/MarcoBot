@@ -19,10 +19,12 @@ module Karma
 		usermask = user
 		user = usermask.split("!")[1].downcase
 		actualuser = usermask.split("!")[0].downcase
-		if message.start_with?("<3 ") or message[-2..-1] == "++" then
+		if message.start_with?("<3 ") or message[-2..-1] == "++" or message =~ /\<3\s[a-zA-Z0-9\-\[\]\{\}\|]+/ then
 			puts "Adding karma"
 			if message.start_with?("<3 ") then
 				target = message.sub("<3 ","").strip.downcase
+			elsif message =~ /\<3\s[a-zA-Z0-9\[\]\-\{\}\|]+/ then
+				target = message.match(/\<3\s[a-zA-Z0-9\[\]\-\{\}\|]+/).to_a[0].sub("<3 ","").strip.downcase
 			else
 				target = message.strip[0..message.strip.size-3].downcase
 			end
@@ -36,10 +38,12 @@ module Karma
 				puts "target/#{target.class}/#{target}"
 				puts "coefficient/#{coefficient.class}/#{coefficient}"
 			end
-		elsif message.start_with?("</3 ") or message[-2..-1] == "--" then
+		elsif message.start_with?("</3 ") or message[-2..-1] == "--" or message =~ /\<\/3\s[a-zA-Z0-9\[\]\-\{\}\|]+/ then
 			puts "subtracting karma"
 			if message.start_with?("</3 ") then
 				target = message.sub("</3 ","").strip.downcase
+			elsif message =~ /\<\/3\s[a-zA-Z0-9\[\]\{\}\-\|]+/ then
+				target = message.match(message =~ /\<3\s[a-zA-Z0-9\[\]\{\}\-\|]+/).to_a[0].sub("</3 ","").strip.downcase
 			else
 				target = message.strip[0..message.strip.size-3].downcase
 			end
