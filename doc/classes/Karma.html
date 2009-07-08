@@ -86,10 +86,10 @@ Adds/takes karma points from someone
       <h3 class="section-bar">Methods</h3>
 
       <div class="name-list">
-      <a href="#M000031">check_for_karma</a>&nbsp;&nbsp;
-      <a href="#M000032">get_karma</a>&nbsp;&nbsp;
-      <a href="#M000029">karma_init</a>&nbsp;&nbsp;
-      <a href="#M000030">karma_save</a>&nbsp;&nbsp;
+      <a href="#M000040">check_for_karma</a>&nbsp;&nbsp;
+      <a href="#M000041">get_karma</a>&nbsp;&nbsp;
+      <a href="#M000038">karma_init</a>&nbsp;&nbsp;
+      <a href="#M000039">karma_save</a>&nbsp;&nbsp;
       </div>
     </div>
 
@@ -111,13 +111,12 @@ Adds/takes karma points from someone
     <div id="methods">
       <h3 class="section-bar">Public Instance methods</h3>
 
-      <div id="method-M000031" class="method-detail">
-        <a name="M000031"></a>
+      <div id="method-M000040" class="method-detail">
+        <a name="M000040"></a>
 
         <div class="method-heading">
-          <a href="Karma.src/M000031.html" target="Code" class="method-signature"
-            onclick="popupCode('Karma.src/M000031.html');return false;">
-          <span class="method-name">check_for_karma</span><span class="method-args">(message,user,channel,actualuser)</span>
+          <a href="#M000040" class="method-signature">
+          <span class="method-name">check_for_karma</span><span class="method-args">(message,user,channel)</span>
           </a>
         </div>
       
@@ -127,15 +126,95 @@ Checks for (&lt;3/$user++ or &lt;/3/$user&#8212; in a message), and
 adds/subtracts from the target&#8216;s karma if he hasn&#8216;t voted in
 TIMEOUT seconds, and his/her username isn&#8216;t in a blacklist.
 </p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000040-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000040-source">
+<pre>
+<span class="ruby-comment cmt"># File karma.rb, line 18</span>
+        <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">check_for_karma</span>(<span class="ruby-identifier">message</span>,<span class="ruby-identifier">user</span>,<span class="ruby-identifier">channel</span>)
+                <span class="ruby-identifier">usermask</span> = <span class="ruby-identifier">user</span>
+                <span class="ruby-identifier">user</span> = <span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;!&quot;</span>)[<span class="ruby-value">1</span>].<span class="ruby-identifier">downcase</span>
+                <span class="ruby-identifier">actualuser</span> = <span class="ruby-identifier">usermask</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;!&quot;</span>)[<span class="ruby-value">0</span>].<span class="ruby-identifier">downcase</span>
+                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-value str">&quot;&lt;3 &quot;</span>) <span class="ruby-keyword kw">or</span> <span class="ruby-identifier">message</span>[<span class="ruby-value">-2</span><span class="ruby-operator">..</span><span class="ruby-value">-1</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;++&quot;</span> <span class="ruby-keyword kw">or</span> <span class="ruby-identifier">message</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/\&lt;3\s[a-zA-Z0-9\-\[\]\{\}\|]+/</span> <span class="ruby-keyword kw">then</span>
+                        <span class="ruby-identifier">puts</span> <span class="ruby-value str">&quot;Adding karma&quot;</span>
+                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-value str">&quot;&lt;3 &quot;</span>) <span class="ruby-keyword kw">then</span>
+                                <span class="ruby-identifier">target</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-value str">&quot;&lt;3 &quot;</span>,<span class="ruby-value str">&quot;&quot;</span>).<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">downcase</span>
+                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">message</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/\&lt;3\s[a-zA-Z0-9\[\]\-\{\}\|]+/</span> <span class="ruby-keyword kw">then</span>
+                                <span class="ruby-identifier">target</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">match</span>(<span class="ruby-regexp re">/\&lt;3\s[a-zA-Z0-9\[\]\-\{\}\|]+/</span>).<span class="ruby-identifier">to_a</span>[<span class="ruby-value">0</span>].<span class="ruby-identifier">sub</span>(<span class="ruby-value str">&quot;&lt;3 &quot;</span>,<span class="ruby-value str">&quot;&quot;</span>).<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">downcase</span>
+                        <span class="ruby-keyword kw">else</span>
+                                <span class="ruby-identifier">target</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">strip</span>[<span class="ruby-value">0</span><span class="ruby-operator">..</span><span class="ruby-identifier">message</span>.<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">size</span><span class="ruby-operator">-</span><span class="ruby-value">3</span>].<span class="ruby-identifier">downcase</span>
+                        <span class="ruby-keyword kw">end</span>
+                        <span class="ruby-identifier">coefficient</span> = <span class="ruby-value">1</span>
+                        <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'debugmode'</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">'yes'</span> <span class="ruby-keyword kw">then</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-value str">&quot;MESSAGE ENDS IN NEWLINE LOLOLOL&quot;</span> <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message</span>.<span class="ruby-identifier">end_with?</span>(<span class="ruby-value str">&quot;\n&quot;</span>)
+                                <span class="ruby-identifier">puts</span> <span class="ruby-value str">&quot;Var/class/value&quot;</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;message/#{message.class}/#{message}&quot;</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;user/#{user.class}/#{user}&quot;</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;actualuser/#{actualuser.class}/#{actualuser}&quot;</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;target/#{target.class}/#{target}&quot;</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;coefficient/#{coefficient.class}/#{coefficient}&quot;</span>
+                        <span class="ruby-keyword kw">end</span>
+                <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">message</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-value str">&quot;&lt;/3 &quot;</span>) <span class="ruby-keyword kw">or</span> <span class="ruby-identifier">message</span>[<span class="ruby-value">-2</span><span class="ruby-operator">..</span><span class="ruby-value">-1</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;--&quot;</span> <span class="ruby-keyword kw">or</span> <span class="ruby-identifier">message</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/\&lt;\/3\s[a-zA-Z0-9\[\]\-\{\}\|]+/</span> <span class="ruby-keyword kw">then</span>
+                        <span class="ruby-identifier">puts</span> <span class="ruby-value str">&quot;subtracting karma&quot;</span>
+                        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-value str">&quot;&lt;/3 &quot;</span>) <span class="ruby-keyword kw">then</span>
+                                <span class="ruby-identifier">target</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-value str">&quot;&lt;/3 &quot;</span>,<span class="ruby-value str">&quot;&quot;</span>).<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">downcase</span>
+                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">message</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/\&lt;\/3\s[a-zA-Z0-9\[\]\{\}\-\|]+/</span> <span class="ruby-keyword kw">then</span>
+                                <span class="ruby-identifier">target</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">match</span>(<span class="ruby-identifier">message</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/\&lt;3\s[a-zA-Z0-9\[\]\{\}\-\|]+/</span>).<span class="ruby-identifier">to_a</span>[<span class="ruby-value">0</span>].<span class="ruby-identifier">sub</span>(<span class="ruby-value str">&quot;&lt;/3 &quot;</span>,<span class="ruby-value str">&quot;&quot;</span>).<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">downcase</span>
+                        <span class="ruby-keyword kw">else</span>
+                                <span class="ruby-identifier">target</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">strip</span>[<span class="ruby-value">0</span><span class="ruby-operator">..</span><span class="ruby-identifier">message</span>.<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">size</span><span class="ruby-operator">-</span><span class="ruby-value">3</span>].<span class="ruby-identifier">downcase</span>
+                        <span class="ruby-keyword kw">end</span>
+                        <span class="ruby-identifier">coefficient</span> = <span class="ruby-value">-1</span>
+                        <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'debugmode'</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">'yes'</span> <span class="ruby-keyword kw">then</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-value str">&quot;MESSAGE ENDS IN NEWLINE LOLOLOL&quot;</span> <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">message</span>.<span class="ruby-identifier">end_with?</span>(<span class="ruby-value str">&quot;\n&quot;</span>)
+                                <span class="ruby-identifier">puts</span> <span class="ruby-value str">&quot;Var/class/value&quot;</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;message/#{message.class}/#{message}&quot;</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;user/#{user.class}/#{user}&quot;</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;actualuser/#{actualuser.class}/#{actualuser}&quot;</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;target/#{target.class}/#{target}&quot;</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;coefficient/#{coefficient.class}/#{coefficient}&quot;</span>
+                        <span class="ruby-keyword kw">end</span>
+                <span class="ruby-keyword kw">end</span>
+                <span class="ruby-comment cmt"># Magical stuff</span>
+                <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">target</span> <span class="ruby-operator">!=</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">and</span> <span class="ruby-identifier">actualuser</span>.<span class="ruby-identifier">downcase</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">target</span> <span class="ruby-keyword kw">and</span> <span class="ruby-ivar">@users</span>[<span class="ruby-identifier">channel</span>.<span class="ruby-identifier">downcase</span>].<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">target</span>.<span class="ruby-identifier">downcase</span>.<span class="ruby-identifier">strip</span>) <span class="ruby-keyword kw">and</span> <span class="ruby-operator">!</span><span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'blacklistnicks'</span>].<span class="ruby-identifier">downcase</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;,&quot;</span>).<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">actualuser</span>.<span class="ruby-identifier">downcase</span>) <span class="ruby-keyword kw">and</span> <span class="ruby-identifier">coefficient</span> <span class="ruby-operator">!=</span> <span class="ruby-value">0</span> <span class="ruby-keyword kw">then</span>
+
+                        <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@karmatimeouts</span>[<span class="ruby-node">&quot;#{user}/#{target}&quot;</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">or</span> (<span class="ruby-constant">Time</span>.<span class="ruby-identifier">new</span> <span class="ruby-operator">-</span> <span class="ruby-ivar">@karmatimeouts</span>[<span class="ruby-identifier">user</span><span class="ruby-operator">+</span><span class="ruby-value str">'/'</span><span class="ruby-operator">+</span><span class="ruby-identifier">target</span>]) <span class="ruby-operator">&gt;=</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'karmatimeout'</span>].<span class="ruby-identifier">to_i</span>() <span class="ruby-keyword kw">and</span> <span class="ruby-identifier">coefficient</span> <span class="ruby-operator">==</span> <span class="ruby-value">1</span> <span class="ruby-keyword kw">then</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-value str">&quot;Truly adding karma&quot;</span>
+                                <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@karmafile</span>[<span class="ruby-identifier">target</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span>
+                                        <span class="ruby-ivar">@karmafile</span>[<span class="ruby-identifier">target</span>] = <span class="ruby-value">0</span>
+                                <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-ivar">@karmafile</span>[<span class="ruby-identifier">target</span>] <span class="ruby-operator">+=</span> <span class="ruby-value">1</span>
+                                <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'karma_slow'</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">'yes'</span> <span class="ruby-keyword kw">then</span>
+                                        <span class="ruby-identifier">karma_save</span>()
+                                <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-ivar">@karmatimeouts</span>[<span class="ruby-identifier">user</span><span class="ruby-operator">+</span><span class="ruby-value str">'/'</span><span class="ruby-operator">+</span><span class="ruby-identifier">target</span>] = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">new</span>
+                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">channel</span>,<span class="ruby-value str">&quot;Adding karma&quot;</span>) <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'karmadebug'</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">'yes'</span>               
+                        <span class="ruby-keyword kw">elsif</span> <span class="ruby-ivar">@karmatimeouts</span>[<span class="ruby-node">&quot;#{user}/#{target}&quot;</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">or</span> (<span class="ruby-constant">Time</span>.<span class="ruby-identifier">new</span> <span class="ruby-operator">-</span> <span class="ruby-ivar">@karmatimeouts</span>       [<span class="ruby-identifier">user</span><span class="ruby-operator">+</span><span class="ruby-value str">'/'</span><span class="ruby-operator">+</span><span class="ruby-identifier">target</span>]) <span class="ruby-operator">&gt;=</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'karmatimeout'</span>].<span class="ruby-identifier">to_i</span>() <span class="ruby-keyword kw">and</span> <span class="ruby-identifier">coefficient</span> <span class="ruby-operator">==</span> <span class="ruby-value">-1</span> <span class="ruby-keyword kw">then</span>
+                                <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@karmafile</span>[<span class="ruby-identifier">target</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span>
+                                        <span class="ruby-ivar">@karmafile</span>[<span class="ruby-identifier">target</span>] = <span class="ruby-value">0</span>
+                                <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-ivar">@karmafile</span>[<span class="ruby-identifier">target</span>] <span class="ruby-operator">-=</span> <span class="ruby-value">1</span>
+                                <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'karma_slow'</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">'yes'</span> <span class="ruby-keyword kw">then</span>
+                                        <span class="ruby-identifier">karma_save</span>()
+                                <span class="ruby-keyword kw">end</span>
+                                <span class="ruby-ivar">@karmatimeouts</span>[<span class="ruby-identifier">user</span><span class="ruby-operator">+</span><span class="ruby-value str">'/'</span><span class="ruby-operator">+</span><span class="ruby-identifier">target</span>] = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">new</span>
+                                <span class="ruby-identifier">puts</span> <span class="ruby-value str">&quot;Removing karma&quot;</span>
+                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">channel</span>,<span class="ruby-value str">&quot;Removing karma&quot;</span>) <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'karmadebug'</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">'yes'</span>
+                        <span class="ruby-keyword kw">else</span>
+                                <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">channel</span>,<span class="ruby-value str">&quot;On cooldown.&quot;</span>) <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@configfile</span>[<span class="ruby-value str">'karmadebug'</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">'yes'</span>
+                        <span class="ruby-keyword kw">end</span>
+                        <span class="ruby-identifier">coefficient</span> = <span class="ruby-value">0</span>
+                <span class="ruby-keyword kw">end</span>           
+        <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
         </div>
       </div>
 
-      <div id="method-M000032" class="method-detail">
-        <a name="M000032"></a>
+      <div id="method-M000041" class="method-detail">
+        <a name="M000041"></a>
 
         <div class="method-heading">
-          <a href="Karma.src/M000032.html" target="Code" class="method-signature"
-            onclick="popupCode('Karma.src/M000032.html');return false;">
+          <a href="#M000041" class="method-signature">
           <span class="method-name">get_karma</span><span class="method-args">(target,person)</span>
           </a>
         </div>
@@ -144,15 +223,28 @@ TIMEOUT seconds, and his/her username isn&#8216;t in a blacklist.
           <p>
 Gets a target&#8216;s karma.
 </p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000041-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000041-source">
+<pre>
+<span class="ruby-comment cmt"># File karma.rb, line 93</span>
+        <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">get_karma</span>(<span class="ruby-identifier">target</span>,<span class="ruby-identifier">person</span>)
+                <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@karmafile</span>[<span class="ruby-identifier">person</span>.<span class="ruby-identifier">downcase</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">then</span>
+                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;#{person} has no karma yet.&quot;</span>)
+                <span class="ruby-keyword kw">else</span>
+                        <span class="ruby-identifier">privmsg</span>(<span class="ruby-identifier">target</span>,<span class="ruby-node">&quot;#{person}'s karma is #{@karmafile[person.downcase]}.&quot;</span>)
+                <span class="ruby-keyword kw">end</span>
+        <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
         </div>
       </div>
 
-      <div id="method-M000029" class="method-detail">
-        <a name="M000029"></a>
+      <div id="method-M000038" class="method-detail">
+        <a name="M000038"></a>
 
         <div class="method-heading">
-          <a href="Karma.src/M000029.html" target="Code" class="method-signature"
-            onclick="popupCode('Karma.src/M000029.html');return false;">
+          <a href="#M000038" class="method-signature">
           <span class="method-name">karma_init</span><span class="method-args">()</span>
           </a>
         </div>
@@ -161,15 +253,26 @@ Gets a target&#8216;s karma.
           <p>
 Loads the karma from the karmafile and stores it in a global var.
 </p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000038-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000038-source">
+<pre>
+<span class="ruby-comment cmt"># File karma.rb, line 4</span>
+        <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">karma_init</span>()
+                <span class="ruby-identifier">file_path</span> = <span class="ruby-node">&quot;#{@basepath}karma&quot;</span>
+                <span class="ruby-ivar">@karmafile</span> = <span class="ruby-constant">YAML</span><span class="ruby-operator">::</span><span class="ruby-identifier">load</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-identifier">file_path</span>))
+                <span class="ruby-ivar">@karmatimeouts</span> = <span class="ruby-constant">Hash</span>.<span class="ruby-identifier">new</span>
+        <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
         </div>
       </div>
 
-      <div id="method-M000030" class="method-detail">
-        <a name="M000030"></a>
+      <div id="method-M000039" class="method-detail">
+        <a name="M000039"></a>
 
         <div class="method-heading">
-          <a href="Karma.src/M000030.html" target="Code" class="method-signature"
-            onclick="popupCode('Karma.src/M000030.html');return false;">
+          <a href="#M000039" class="method-signature">
           <span class="method-name">karma_save</span><span class="method-args">()</span>
           </a>
         </div>
@@ -178,6 +281,18 @@ Loads the karma from the karmafile and stores it in a global var.
           <p>
 Saves stuff to the <a href="Karma.html">Karma</a> file
 </p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000039-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000039-source">
+<pre>
+<span class="ruby-comment cmt"># File karma.rb, line 10</span>
+        <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">karma_save</span>()
+                <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-node">&quot;#{@basepath}karma&quot;</span>,<span class="ruby-value str">&quot;w&quot;</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">file</span><span class="ruby-operator">|</span>
+                        <span class="ruby-identifier">file</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-ivar">@karmafile</span>.<span class="ruby-identifier">to_yaml</span>
+                <span class="ruby-keyword kw">end</span>
+        <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
         </div>
       </div>
 
