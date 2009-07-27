@@ -1,0 +1,18 @@
+# Logfile created on Mon Jul 20 16:07:18 -0300 2009 by /
+D, [2009-07-20T16:07:18.792958 #21980] DEBUG -- :  created DefaultListSelectionModel XXX
+D, [2009-07-20T16:07:18.793439 #21980] DEBUG -- : called bind_key BIND 9 C-i  
+D, [2009-07-20T16:07:18.793614 #21980] DEBUG -- : called bind_key BIND 353 btab  
+D, [2009-07-20T16:07:18.793734 #21980] DEBUG -- : called bind_key BIND 261 right  
+D, [2009-07-20T16:07:18.793857 #21980] DEBUG -- : called bind_key BIND 260 left  
+D, [2009-07-20T16:07:18.794394 #21980] DEBUG -- : called bind_key BIND    
+D, [2009-07-20T16:07:18.795322 #21980] DEBUG -- : called bind_key BIND    
+D, [2009-07-20T16:07:18.795760 #21980] DEBUG -- : called bind_key BIND    
+D, [2009-07-20T16:07:18.796112 #21980] DEBUG -- : called bind_key BIND    
+D, [2009-07-20T16:07:20.560693 #21980] DEBUG -- :  _print_more_data_marker(184 >= 0 + 12)
+D, [2009-07-20T16:07:20.561057 #21980] DEBUG -- : form repaint calling select field 0
+D, [2009-07-20T16:07:20.561228 #21980] DEBUG -- :  on leave of table 2009-01-16 21:58 
+D, [2009-07-20T16:07:20.561858 #21980] DEBUG -- :  def on_enter_cell 0, 0
+D, [2009-07-20T16:07:20.562096 #21980] DEBUG -- :  turning on editing cell at 0, 0
+D, [2009-07-20T16:07:20.562272 #21980] DEBUG -- :  def get_cell_editor 0, 0
+D, [2009-07-20T16:07:20.562757 #21980] DEBUG -- : EEE if (41)> 108
+D, [2009-07-20T16:07:20.569249 #21980] DEBUG -- :  _print_more_data_marker(184 >= 0 + 12)

@@ -15,11 +15,13 @@ module Faidio
 #		xmlfile.elements.each("icestats/sources") { |sources| $sources_num = sources.text.to_i }
 		if @root.elements["sources"].text.to_i >= 1 then
 			privmsg(target,"Streams:")
+			puts "People are streaming"
 			$xmlfile.elements.each("icestats/source") do |source|
+				puts "Listing mount"
 				mountpoint = source.attributes["mount"]
-				listeners_plus_peak = source.elements["listeners"].text+"/"+source.elements["listener_peak"].text
-				artist_title = source.elements["artist"].text+" - "+source.elements["title"].text
-				name_description = source.elements["server_name"].text+" ("+source.elements['server_description'].text+")"
+				listeners_plus_peak = source.elements["listeners"].text.to_s+"/"+source.elements["listener_peak"].text.to_s
+				artist_title = source.elements["artist"].text.to_s+" - "+source.elements["title"].text.to_s
+				name_description = source.elements["server_name"].text.to_s+" ("+source.elements['server_description'].text.to_s+")"
 				if source.elements["listenurl"] != nil then
 					listen_url = source.elements["listenurl"].text
 				else
@@ -35,7 +37,7 @@ module Faidio
 				end
 				genre = source.elements["genre"].text
 				subtype = source.elements["subtype"].text
-				output = name_description+" at "+listen_url+"; Genre is "+genre+"; "+listeners_plus_peak+" listeners. Streaming in "+channels+" at "+samplerate+" Hz using "+subtype+". Now playing: "+artist_title
+				output = name_description+" at "+listen_url+".m3u; Genre is "+genre+"; "+listeners_plus_peak+" listeners. Streaming in "+channels+" at "+samplerate+" Hz using "+subtype+". Now playing: "+artist_title
 				privmsg(target,output,2)
 			end
 				

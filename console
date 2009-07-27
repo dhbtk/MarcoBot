@@ -1,0 +1,81 @@
+#!/usr/bin/ruby -w
+# :D :D :D
+require 'etc'
+require 'readline'
+require 'marcobot'
+#require 'macroedit' ## Buggy
+# Defining stuff
+def spawn_marco(path_to_rc)
+	# Mostly copypasta from marcobot.rb
+	if !path_to_rc then
+		puts "Empty params!"
+	elsif !File.directory?(path_to_rc)
+		puts "Not a directory."
+	else
+		if path_to_rc[-1..-1] == '/' then path_to_rc[-1] = ''; end
+		if !File.exists?(path_to_rc+'/marcobotrc') or YAML::load(path_to_rc+'/marcobotrc').nil? then
+			puts "marcobotrc is empty or does not exist."
+		else
+			puts "Loading config file and launching Marco..."
+			thread = Thread.new do
+				configfile = YAML::load(path_to_rc+'/marcobotrc')
+				puts "Spawning IRCBot"
+				marco = IRCBot.new(configfile,path_to_rc)
+				puts marco
+				$marcos.push(marco)
+				marco.connect()
+				puts "Connected!"
+				marco.main_loop()
+			end
+			puts "Marco instance created with index number #{$marcos.index(thread)}."
+		end
+	end
+end
+begin
+	puts "Marco's console, version nil"
+	puts "Try \"help\" for some help."
+	cmd = ""
+	oldcmd = ""
+	@exit = false
+	$marcos = []
+	$commands = ['help','quit','macroedit'].sort
+	completion = proc { |s| 
+		if s.start_with?('/') then
+			return Dir[s+'*'].grep(/^#{Regexp.escape(s)}/)
+		else
+			return $commands.grep(/^#{Regexp.escape(s)}/)
+		end
+	}
+	Readline.completion_append_character = " "
+	Readline.completion_proc = completion
+	while !@exit
+		prompt = Etc.getlogin.to_s+"@MarcoBot% "
+		cmd = Readline.readline(prompt,true)
+		params = cmd.sub(cmd.split[0],"").strip
+		cmd = cmd.split[0]
+		if cmd != nil
+			case cmd
+				when "macroedit"
+					
+				when "quit"
+					@exit = true
+				when "help"
+					if params.empty? then
+						puts "Try \"help <command>\" for help."
+					else
+						case params
+							when "help"
+								puts "See general help, or in-depth help."
+							when "quit"
+								puts "Return to your shell."
+						end
+				end
+				else
+					puts "Unknown command. Try help."
+			end
+		end
+	end
+rescue Interrupt
+	system('stty',`stty -g`.chomp)
+	exit
+end
