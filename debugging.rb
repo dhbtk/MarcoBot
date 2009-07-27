@@ -20,7 +20,7 @@ module Debugging
 		@mainwindow.show_all
 	end
 	def puts(message)
-		@debug = @debug + "#{timestamp(Time.new)} #{message}\n"
+		@debug = @debug + "#{timestamp(Time.new)} #{message.to_s.chomp}\n"
 		if @debugwindow != nil then
 			@debugwindow.buffer.text = @debug
 			end_mark = @debugwindow.buffer.create_mark(nil,@debugwindow.buffer.end_iter,false)

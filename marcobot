@@ -36,7 +36,7 @@ class IRCBot
 	include Urbandict
 	# initialize: get these nasty vars and make them globals.
 	#
-	def initialize(server,port,nick,autojoin_channels,ns_password,basepath,configfile,rcpath)
+	def initialize(configfile,rcpath)
 		@debug = ""
 		@rcpath = rcpath
 		@server = configfile['server'].strip
@@ -45,7 +45,7 @@ class IRCBot
 		if configfile['debugmode'] == 'yes' then
 			@channel = [configfile['debugchannel'].downcase]
 		else
-			@channel = autojoin_channels.downcase.split(",")
+			@channel = configfile['channels'].downcase.split(",")
 		end
 		puts @channel
 		@ns_password = configfile['nickserv_password'].strip
@@ -241,10 +241,10 @@ class IRCBot
 	#
 	def handle_message(user,target,message,usermask,frombot)
 		if target[0..0] == "#" then
-			puts user
-			puts target
-			puts message
-			puts usermask
+#			puts user
+#			puts target
+#			puts message
+#			puts usermask
 			# Stuff that is happening in a chan
 			check_for_karma(message.strip,usermask,target)
 			check_for_macro(message,target,user) if @configfile['macrosenabled'] == 'true' and !@configfile['nomacrochans'].downcase.split(",").include?(target.downcase) and !message.start_with?("#{@configfile['commandidentifier']}macrocheck")
@@ -685,7 +685,7 @@ class IRCBot
 					end
 				when "help"
 					if params == nil then
-						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~urbandict, ~dieroll, ~echo, ~lyrics, ~faidio, ~faidwiki, ~stfu, ~karma, decision making, ~trivia, ~addquestion, ~isdown. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
+						privmsg(target,"Commands: ~help, ~coinflip, ~8ball, ~leave, ~live, ~thetime, ~shutup, ~macro, ~wiki, ~urbandict, ~dieroll, ~echo, ~lyrics, ~faidio, ~faidwiki, ~stfu, decision making, ~trivia, ~addquestion, ~isdown. Run \"#{@configfile['commandidentifier']}help ~command\" to get a more specific help.")
 #						privmsg(target,"Commands: #{@configfile['commandidentifier']}catchphrase, #{@configfile['commandidentifier']}define, #{@configfile['commandidentifier']}die, #{@configfile['commandidentifier']}dieroll, #{@configfile['commandidentifier']}flingpoo, #{@configfile['commandidentifier']}isdown, #{@configfile['commandidentifier']}macro, #{@configfile['commandidentifier']}macrocheck, #{@configfile['commandidentifier']}oplist, #{@configfile['commandidentifier']}quote, #{@configfile['commandidentifier']}rae, #{@configfile['commandidentifier']}ratscrew, #{@configfile['commandidentifier']}spam, #{@configfile['commandidentifier']}swears, #{@configfile['commandidentifier']}timebomb, #{@configfile['commandidentifier']}trout, #{@configfile['commandidentifier']}urbandict, #{@configfile['commandidentifier']}unwiki, #{@configfile['commandidentifier']}wiki. Run #{@configfile['commandidentifier']}help <#{@configfile['commandidentifier']}command> for help.")
 					else
 						case params
@@ -717,8 +717,8 @@ class IRCBot
 								privmsg(target,"Clears the message queue. Useful for spam-y situations.")
 							when "#{@configfile['commandidentifier']}faidwiki"
 								privmsg(target,"Looks up an article on the FaiDwiki.")
-							when "#{@configfile['commandidentifier']}karma"
-								privmsg(target,"Karma's a bitch.")
+#							when "#{@configfile['commandidentifier']}karma"
+#								privmsg(target,"Karma's a bitch.")
 							when "decision making"
 								privmsg(target,"Ask me, with my username first, about something or other.")
 							when "#{@configfile['commandidentifier']}trivia"
@@ -941,12 +941,13 @@ class IRCBot
 					else
 						privmsg(target,"You can't do that man")
 					end
-				when "karma"
+=begin				when "karma"
 					if params == nil then
 						privmsg(target,'Whose karma?')
 					else
 						get_karma(target,params.strip)
 					end
+=end # Commented out for great justice
 				when "userlist"
 					if is_auth_user?(usermask.split("@")[0]) then
 						privmsg(target,@users[target.downcase].join(" "))
@@ -1066,64 +1067,67 @@ class IRCBot
 		end
 	end
 end
-# Go! Go! Go!
-# ARGV[0] should be the path/to/marcobotrc - trailing slash
-if ARGV.empty? then
-	puts "Params: #{$0} /path/to/marcobotrc"
-	exit()
-end
-if File.directory?(ARGV[0]) then
-	path = ARGV[0]
-	configfile = YAML::load(File.open("#{path}/marcobotrc"))
-	puts configfile.class
-	irc = IRCBot.new(configfile["server"],configfile['port'],configfile['nickname'],configfile	['channels'],configfile['nickserv_password'],configfile['basepath'],configfile,path)
-	begin
-		irc.connect()
-	rescue Exception => detail
-		puts "Failed to connect :("
-		puts detail.message()
-		puts detail.backtrace().join("\n")
-		puts "Waiting..."
-		puts "5..."
-		sleep 1
-		puts "4..."
-		sleep 1
-		puts "3..."
-		sleep 1
-		puts "2..."
-		sleep 1
-		puts "1..."
-		sleep 1
-		retry
+# Stuff
+if __FILE__ == $0 then
+	# Go! Go! Go!
+	# ARGV[0] should be the path/to/marcobotrc minus trailing slash
+	if ARGV.empty? then
+		puts "Params: #{$0} /path/to/marcobotrc"
+		exit()
 	end
-	begin
-		irc.main_loop()
-	rescue Interrupt
-		irc.send_message(configfile['debugchannel'],"Going down!")
-	rescue Exception => detail
-		puts detail.message()
-		puts "Backtrace:"
-		for i in detail.backtrace()
-			puts i 
+	if File.directory?(ARGV[0]) then
+		path = ARGV[0]
+		configfile = YAML::load(File.open("#{path}/marcobotrc"))
+		puts configfile.class
+		irc = IRCBot.new(configfile,path)
+		begin
+			irc.connect()
+		rescue Exception => detail
+			puts "Failed to connect :("
+			puts detail.message()
+			puts detail.backtrace().join("\n")
+			puts "Waiting..."
+			puts "5..."
+			sleep 1
+			puts "4..."
+			sleep 1
+			puts "3..."
+			sleep 1
+			puts "2..."
+			sleep 1
+			puts "1..."
+			sleep 1
+			retry
 		end
-		irc.send_message(configfile['debugchannel'],"Oh dear, an exception: #{detail.message()}")
-		sleep 1
-		retry
-	ensure
-		puts "Saving logs..."
-		irc.logarray.each do |f|
-			puts f
-			f[1].close
+		begin
+			irc.main_loop()
+		rescue Interrupt
+			irc.send_message(configfile['debugchannel'],"Going down!")
+		rescue Exception => detail
+			puts detail.message()
+			puts "Backtrace:"
+			for i in detail.backtrace()
+				puts i 
+			end
+			irc.send_message(configfile['debugchannel'],"Oh dear, an exception: #{detail.message()}")
+			sleep 1
+			retry
+		ensure
+			puts "Saving logs..."
+			irc.logarray.each do |f|
+				puts f
+				f[1].close
+			end
+			irc.rawlogfile.close
+			File.open("#{path}/marcobotrc","w") do |f|
+				f << irc.configfile.to_yaml
+			end
+			File.open("#{configfile['basepath']}karma","w") do |f|
+				f << irc.karmafile.to_yaml
+			end
+			
 		end
-		irc.rawlogfile.close
-		File.open("#{path}/marcobotrc","w") do |f|
-			f << irc.configfile.to_yaml
-		end
-		File.open("#{configfile['basepath']}karma","w") do |f|
-			f << irc.karmafile.to_yaml
-		end
-		
+	else
+		puts "Invalid path"
 	end
-else
-	puts "Invalid path"
 end

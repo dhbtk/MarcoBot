@@ -5,14 +5,9 @@ require 'open-uri'
 module Urbandict
 	def urbandict_lookup(stuff)
 		page = Hpricot(open("http://www.urbandictionary.com/define.php?term=#{stuff.gsub(" ","+")}"))
-		definition = page.at("div.definition").inner_html.to_s.gsub("<br />","").gsub("<b>",2.chr).gsub("</b>",2.chr).gsub(/<a(.+?)>/,0x1F.chr).gsub("</a>",0x1F.chr).gsub(/<(.+?)>/,"").gsub("\n"," ").gsub("\r"," ").strip
+		definition = page.at("div.definition").inner_html.to_s.gsub("<br />","").gsub("<b>",2.chr).gsub("</b>",2.chr).gsub(/<a(.+?)>/,0x1F.chr).gsub("</a>",0x1F.chr).gsub(/<(.+?)>/,"").gsub("\n"," ").gsub("\r"," ").strip.gsub("&quot;","\"")
 		puts "definition: #{definition}"
-		if definition.length > 400 then
-			split_definition = definition.scan(/.{1,400}/)
-			return split_definition
-		else
-			return [definition]
-		end
+		return [definition]
 	end
 end
 if __FILE__ == $0 then
