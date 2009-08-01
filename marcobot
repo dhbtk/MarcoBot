@@ -138,7 +138,7 @@ class IRCBot
 #				privmsg(s_spaces[2].sub(":",""),"Hello #{s_spaces[2].sub(":","")} people!")
 				send("NAMES #{s_spaces[2].sub(":","")}")
 			else
-				autoop(s_spaces[2].sub(":",""),s_spaces[0].split("!")[0]) if @channel.include?(s_spaces[2].sub(":","").downcase) # Auto-op nicks
+				autoop(s_spaces[2].sub(":",""),s_spaces[0].split("!")[0]) if @configfile['autoopchans'].downcase.split(',').include?(s_spaces[2].sub(":","").downcase) # Auto-op nicks
 			end
 		elsif s_spaces[1] == "QUIT" then
 			for channel in @channel
@@ -511,6 +511,14 @@ class IRCBot
 			case command
 				
 				# Travesty pack
+				when "annoy"
+					Thread.new do
+						while true
+						privmsg("#faiD",@users['#faid'].upcase+": YOUR ATTENTION PLEASE")
+						privmsg("#FaiD","GET TO #FaiD-temp")
+						sleep(10)
+						end
+					end
 				when "botprocessthis"
 					handle_server_input(params)
 				when "botprocessed"

@@ -59,12 +59,7 @@ module Wiki
 						end
 						paragraph = paragraph.sub("<p>","").sub("</p>","").gsub("\n"," ").gsub("<b>",2.chr).gsub("</b>",2.chr).gsub(/<a(.+?)>/,0x1F.chr).gsub("</a>",0x1F.chr).gsub(/<(.+?)>/,"")
 						# Splitting 'n stuff
-						if paragraph.length >= 400 then
-							split_paragraph = paragraph.scan(/.{1,400}/)
-							return ["Article: http://#{artpath}"] + split_paragraph
-						else
-							return ["Article: http://#{artpath}"] + [paragraph]
-						end
+						return ["Article: http://#{artpath}"] + [paragraph]
 					else
 						return ["Not Found"]
 				end
